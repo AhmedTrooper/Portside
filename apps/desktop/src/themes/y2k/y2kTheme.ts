@@ -125,10 +125,10 @@ export const y2kTheme = defineTheme({
     '--color-warning': ['#FFE08A', '#FFE08A'],
     '--color-warning-muted': ['#FFE08A', '#FFE08A'],
 
-    // Bold charcoal borders in light mode (default + card) for the heavy-outline
-    // Y2K look. Dark mode unchanged.
-    '--color-border': ['#2F292E', '#EDEFFC1A'],
-    '--color-border-emphasized': ['#2F292E', '#3a3f5e'],
+    // Bold charcoal borders in light mode and high-contrast slate borders in
+    // dark mode so card edges stay visible against the dark surfaces.
+    '--color-border': ['#2F292E', '#5b6282'],
+    '--color-border-emphasized': ['#2F292E', '#7a82ab'],
 
     // Effects
     '--color-skeleton': ['#d1c5b8', '#2a2e47'],

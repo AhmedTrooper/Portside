@@ -13,6 +13,7 @@ import { Card } from "@astryxdesign/core/Card";
 import { Button } from "@astryxdesign/core/Button";
 import { Link } from "@tanstack/react-router";
 import { useDockerSnapshot } from "./shared/useDockerSnapshot";
+import { DOCKER_CARD_RADIUS, DOCKER_CARD_STYLE } from "./shared/DockerCard";
 import { composeBaseState } from "./shared/types";
 
 interface ResourceCardProps {
@@ -144,12 +145,16 @@ function ResourceCard({
   isLoading,
 }: ResourceCardProps) {
   return (
-    <Link to={to} className="block min-w-0 rounded-[var(--radius-container)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+    <Link
+      to={to}
+      className="block min-w-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+      style={{ borderRadius: DOCKER_CARD_RADIUS }}
+    >
       <Card
         padding={5}
         elevation="low"
         className="h-full min-w-0 transition-transform hover:-translate-y-0.5"
-        style={{ borderColor: "var(--color-border-emphasized)" }}
+        style={DOCKER_CARD_STYLE}
       >
         <div className="flex items-start justify-between gap-3">
           <span

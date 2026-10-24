@@ -12,5 +12,11 @@ export default {
     extend: {},
   },
   darkMode: "class",
+  corePlugins: {
+    // Astryx ships its own reset in the `reset` cascade layer. Tailwind's
+    // preflight is unlayered, so it would override Astryx card borders and
+    // padding with its global `border-width: 0` reset.
+    preflight: false,
+  },
   plugins: [heroui()],
 }

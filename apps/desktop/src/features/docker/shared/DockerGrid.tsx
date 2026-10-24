@@ -6,6 +6,7 @@ import { Toolbar } from "@astryxdesign/core/Toolbar";
 import { TextInput } from "@astryxdesign/core/TextInput";
 import { Button } from "@astryxdesign/core/Button";
 import { Heading, Text } from "@astryxdesign/core/Text";
+import { DOCKER_CARD_STYLE } from "./DockerCard";
 
 export const GRID_CLASS =
   "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5";
@@ -56,7 +57,7 @@ export function DockerGrid({
       padding={0}
       elevation="low"
       className="w-full h-full min-h-0 flex flex-col"
-      style={{ borderColor: "var(--color-border-emphasized)" }}
+      style={DOCKER_CARD_STYLE}
     >
       <Toolbar
         label={label}
@@ -141,7 +142,7 @@ function GridSkeleton() {
           padding={5}
           elevation="low"
           className="min-h-[200px] animate-pulse"
-          style={{ borderColor: "var(--color-border-emphasized)" }}
+          style={DOCKER_CARD_STYLE}
         >
           <div className="h-4 w-2/3 rounded bg-current opacity-10" />
           <div className="mt-3 h-3 w-1/2 rounded bg-current opacity-10" />

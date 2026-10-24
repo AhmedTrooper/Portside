@@ -10,11 +10,6 @@ body {
   font-family: 'Inter Variable', sans-serif;
 }
 
-*{
-    padding: 0;
-    margin: 0;
-}
-
 /* Disable right-click context menu */
 body {
   -webkit-user-select: none;
