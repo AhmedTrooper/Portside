@@ -40,20 +40,20 @@ Read the diff content, not just the file names. The commit message, what gets st
 Then run:
 
 ```sh
-make build lint fmt clippy check
+make precommit
 ```
 
-All five must pass:
+All five checks must pass:
 
 1. `make build` — `bun run build` (tsc + vite build, frontend)
 2. `make lint` — `bun run lint` (tsc --noEmit, frontend)
-3. `make fmt` — `cargo fmt` (src-tauri). If it rewrites files, stage the result and re-run the checks.
+3. `make fmt-check` — `cargo fmt --check` (src-tauri). Run `make fmt` to fix formatting if this fails.
 4. `make clippy` — `cargo clippy` (src-tauri)
 5. `make check` — `cargo check` (src-tauri)
 
 If any of them fails: fix the problem, re-run all five, then commit. Never knowingly commit failing checks. `--no-verify` is for emergencies only, and the fix must follow immediately.
 
-The installed `.git/hooks/pre-commit` enforces this automatically (it runs the four make targets and `cargo fmt --check` so it never rewrites files mid-commit).
+The checked-in `.githooks/pre-commit` hook calls `make precommit` automatically. Enable it once per clone with `make hooks`, which sets `core.hooksPath` to `.githooks`.
 
 ## Who commits
 
