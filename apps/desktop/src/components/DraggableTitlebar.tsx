@@ -1,6 +1,5 @@
 import { useEffect, useState, type PointerEvent } from "react";
 import {
-  GripVertical,
   Maximize,
   Minimize,
   X,
@@ -36,6 +35,8 @@ export default function DraggableTitlebar() {
 
   const handleDragStart = (event: PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
+    const target = event.target;
+    if (target instanceof Element && target.closest("button, a, [role='button'], [data-window-controls]")) return;
     event.preventDefault();
     void appWindow.startDragging();
   };
@@ -45,16 +46,8 @@ export default function DraggableTitlebar() {
   const canBack = router.history.canGoBack();
 
   return (
-    <div className="z-[99] min-w-0 shrink-0 pointer-events-auto flex flex-row items-center justify-between gap-2 border-b border-default bg-surface/80 px-2 sm:px-4 py-2 text-primary shadow-sm backdrop-blur-md">
+    <div onPointerDown={handleDragStart} className="z-[99] min-w-0 shrink-0 pointer-events-auto cursor-grab active:cursor-grabbing flex flex-row items-center justify-between gap-2 border-b border-default bg-surface/80 px-2 sm:px-4 py-2 text-primary shadow-sm backdrop-blur-md">
       <div className="flex items-center min-w-0 gap-1 sm:gap-4">
-        <div
-          onPointerDown={handleDragStart}
-          className="shrink-0 cursor-grab touch-none select-none text-secondary transition-colors hover:text-primary active:cursor-grabbing"
-          title="Drag window"
-        >
-          <GripVertical size={20} />
-        </div>
-
         {/* History navigation. Buttons are disabled at the stack edges. */}
         <div className="hidden min-[360px]:flex items-center gap-1 shrink-0">
           <button
@@ -91,7 +84,7 @@ export default function DraggableTitlebar() {
         </Heading>
       </div>
 
-      <div className="flex items-center gap-1 sm:gap-3 shrink-0 z-10">
+      <div data-window-controls className="flex items-center gap-1 sm:gap-3 shrink-0 z-10">
         {/* Operations panel toggle. Pressing it flips the right rail that
             shows in-flight pull/remove progress on Images and Networks pages. */}
         <button
