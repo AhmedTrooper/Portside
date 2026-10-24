@@ -55,6 +55,6 @@ If any of them fails: fix the problem, re-run all five, then commit. Never knowi
 
 The checked-in `.githooks/pre-commit` hook calls `make precommit` automatically. Enable it once per clone with `make hooks`, which sets `core.hooksPath` to `.githooks`.
 
-## Who commits
+## When to commit
 
-Don't commit on your own. Commits happen when the user explicitly asks for it, and only after the pre-commit rule passes.
+Commit immediately after a feature or fix is complete and the pre-commit rule passes. Do not leave finished work uncommitted. Keep each commit focused on one feature or fix; split unrelated changes into separate commits.
