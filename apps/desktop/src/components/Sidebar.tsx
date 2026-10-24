@@ -1,6 +1,6 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { SideNav, SideNavSection, SideNavItem, SideNavHeading, VStack } from "@astryxdesign/core";
-import { Home, Info, Boxes, Container, Sun, Moon, Cloud, GitBranch } from "lucide-react";
+import { Home, Info, Boxes, Container, Sun, Moon } from "lucide-react";
 import { useAppTheme } from "../context/ThemeContext";
 
 import { useUIStore } from "../store/uiStore";
@@ -45,22 +45,6 @@ function NavItems() {
           isSelected={isSelected(currentPath, "/docker", false)}
           as={Link}
           href="/docker"
-          size="md"
-        />
-        <SideNavItem
-          label="AWS"
-          icon={<Cloud className="w-4 h-4 m-2" />}
-          isSelected={isSelected(currentPath, "/aws", false)}
-          as={Link}
-          href="/aws"
-          size="md"
-        />
-        <SideNavItem
-          label="Git"
-          icon={<GitBranch className="w-4 h-4 m-2" />}
-          isSelected={isSelected(currentPath, "/git", false)}
-          as={Link}
-          href="/git"
           size="md"
         />
         <SideNavItem
