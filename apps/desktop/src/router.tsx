@@ -14,10 +14,8 @@ import ComposePage from "./features/docker/compose/ComposePage";
 import AwsPage from "./features/aws/AwsPage";
 import GitPage from "./features/git/GitPage";
 import DraggableTitlebar from "./components/DraggableTitlebar";
-import { useUIStore } from "./store/uiStore";
+
 function AppLayout() {
-  const { dockPos } = useUIStore();
-  
   return (
     <div style={{ backgroundColor: 'var(--color-background-body)', color: 'var(--color-text-primary)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <AppShell
@@ -25,15 +23,12 @@ function AppLayout() {
         sideNav={<Sidebar />}
         mobileNav={{ breakpoint: "none", hasToggle: false }}
       >
-        <div className={`flex w-full h-full ${dockPos === 'top' || dockPos === 'bottom' ? 'flex-col' : 'flex-row'}`}>
-          {dockPos === 'top' && <DraggableTitlebar />}
-          
+        <div className="flex w-full h-full flex-col">
+          <DraggableTitlebar />
+
           <div className="flex-1 min-h-0 overflow-auto p-4">
             <Outlet />
           </div>
-
-          {dockPos === 'right' && <DraggableTitlebar />}
-          {dockPos === 'bottom' && <DraggableTitlebar />}
         </div>
       </AppShell>
     </div>
