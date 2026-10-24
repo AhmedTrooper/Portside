@@ -2,8 +2,8 @@ name: "publish"
 
 on:
   push:
-    branches:
-      - release
+    tags:
+      - v*
 
 jobs:
   publish-tauri:
@@ -43,6 +43,9 @@ jobs:
             args: "--target aarch64-pc-windows-msvc"
 
     runs-on: ${{ matrix.platform }}
+    defaults:
+      run:
+        working-directory: apps/desktop
     steps:
       - uses: actions/checkout@v4
 
@@ -98,7 +101,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: portside-v__VERSION__
+          projectPath: apps/desktop
+          tagName: v__VERSION__
           releaseName: "Portside v__VERSION__"
           releaseBody: "Portside Developer Control Plane Release. Multi-service GUI supporting Docker, Git, Kubernetes, and Cloud workflows built with Tauri, Rust, React, and Astryx design system."
           releaseDraft: true
