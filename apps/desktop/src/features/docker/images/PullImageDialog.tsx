@@ -1,10 +1,7 @@
 import { useId, useState } from "react";
-import { Dialog, DialogHeader } from "@astryxdesign/core/Dialog";
-import { Layout, LayoutContent, LayoutFooter } from "@astryxdesign/core/Layout";
-import { Button } from "@astryxdesign/core/Button";
 import { Field } from "@astryxdesign/core/Field";
 import { TextInput } from "@astryxdesign/core/TextInput";
-import { HStack } from "@astryxdesign/core/Stack";
+import { DockerFormDialog } from "../shared/DockerFormDialog";
 
 interface PullImageDialogProps {
   isOpen: boolean;
@@ -54,10 +51,7 @@ export function PullImageDialog({ isOpen, onClose, onSubmit }: PullImageDialogPr
   };
 
   return (
-    <Dialog isOpen={isOpen} onOpenChange={handleOpenChange} width="420px" purpose="form">
-      <Layout height="auto">
-        <DialogHeader title="Pull Docker image" onOpenChange={handleOpenChange} />
-        <LayoutContent>
+    <DockerFormDialog isOpen={isOpen} title="Pull Docker image" actionLabel="Pull" width={420} onClose={() => handleOpenChange(false)} onSubmit={submit}>
           <Field
             label="Repository"
             description="e.g. nginx, redis:7-alpine, ghcr.io/me/app:1.0"
@@ -79,18 +73,6 @@ export function PullImageDialog({ isOpen, onClose, onSubmit }: PullImageDialogPr
               hasAutoFocus
             />
           </Field>
-        </LayoutContent>
-        <LayoutFooter hasDivider>
-          <HStack gap={2} justify="end">
-            <Button
-              label="Cancel"
-              variant="secondary"
-              onClick={() => handleOpenChange(false)}
-            />
-            <Button label="Pull" variant="primary" onClick={submit} />
-          </HStack>
-        </LayoutFooter>
-      </Layout>
-    </Dialog>
+    </DockerFormDialog>
   );
 }

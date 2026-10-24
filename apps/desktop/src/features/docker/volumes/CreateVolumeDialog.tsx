@@ -1,10 +1,7 @@
 import { useId, useState } from "react";
-import { Dialog, DialogHeader } from "@astryxdesign/core/Dialog";
-import { Layout, LayoutContent, LayoutFooter } from "@astryxdesign/core/Layout";
-import { Button } from "@astryxdesign/core/Button";
 import { Field } from "@astryxdesign/core/Field";
 import { TextInput } from "@astryxdesign/core/TextInput";
-import { HStack } from "@astryxdesign/core/Stack";
+import { DockerFormDialog } from "../shared/DockerFormDialog";
 import { Database } from "lucide-react";
 
 interface CreateVolumeDialogProps {
@@ -52,10 +49,7 @@ export function CreateVolumeDialog({
   };
 
   return (
-    <Dialog isOpen={isOpen} onOpenChange={handleOpenChange} width="420px" purpose="form">
-      <Layout height="auto">
-        <DialogHeader title="Create Docker volume" onOpenChange={handleOpenChange} />
-        <LayoutContent>
+    <DockerFormDialog isOpen={isOpen} title="Create Docker volume" actionLabel="Create" width={420} onClose={() => handleOpenChange(false)} onSubmit={submit}>
           <Field
             label="Volume name"
             description="Docker creates the volume with the local driver and stores it under /var/lib/docker/volumes."
@@ -78,18 +72,6 @@ export function CreateVolumeDialog({
               hasAutoFocus
             />
           </Field>
-        </LayoutContent>
-        <LayoutFooter hasDivider>
-          <HStack gap={2} justify="end">
-            <Button
-              label="Cancel"
-              variant="secondary"
-              onClick={() => handleOpenChange(false)}
-            />
-            <Button label="Create" variant="primary" onClick={submit} />
-          </HStack>
-        </LayoutFooter>
-      </Layout>
-    </Dialog>
+    </DockerFormDialog>
   );
 }
