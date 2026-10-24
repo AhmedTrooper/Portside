@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "devopseasy",
+      "name": "portside",
       "dependencies": {
         "@astryxdesign/cli": "^0.3.0",
         "@astryxdesign/core": "^0.3.0",

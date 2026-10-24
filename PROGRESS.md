@@ -1,4 +1,4 @@
-# DevOpsEasy - Progress Tracker
+# Portside - Progress Tracker
 
 ## Global Architecture
 - [x] Integrate Rust Tauri backend with Vite + React + TypeScript
