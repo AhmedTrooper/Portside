@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from "react";
-import { Theme, defineTheme, type DefinedTheme, type ThemeMode } from "@astryxdesign/core/theme";
+import { Theme, defineTheme, type DefinedTheme } from "@astryxdesign/core/theme";
 import { y2kTheme } from "../themes/y2k/y2kTheme";
 import { readPreference } from "../utils/preferences";
 
@@ -7,9 +7,7 @@ const LOCAL_STORAGE_MODE_KEY = "portside_theme_mode";
 const LOCAL_STORAGE_CUSTOM_THEME_KEY = "portside_custom_theme_json";
 
 interface ThemeContextType {
-  mode: "light" | "dark";
-  toggleMode: () => void;
-  setMode: (mode: "light" | "dark") => void;
+  mode: "dark";
   customThemeJson: string;
   setCustomThemeJson: (jsonString: string) => boolean;
   clearCustomTheme: () => void;
@@ -19,27 +17,9 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setModeState] = useState<"light" | "dark">(() => {
-    const saved = readPreference(localStorage, LOCAL_STORAGE_MODE_KEY, "_theme_mode");
-    return saved === "light" || saved === "dark" ? saved : "dark";
-  });
-
   const [customThemeJson, setCustomThemeJsonState] = useState<string>(() => {
     return readPreference(localStorage, LOCAL_STORAGE_CUSTOM_THEME_KEY, "_custom_theme_json") || "";
   });
-
-  const toggleMode = () => {
-    setModeState((prev) => {
-      const next = prev === "dark" ? "light" : "dark";
-      localStorage.setItem(LOCAL_STORAGE_MODE_KEY, next);
-      return next;
-    });
-  };
-
-  const setMode = (newMode: "light" | "dark") => {
-    setModeState(newMode);
-    localStorage.setItem(LOCAL_STORAGE_MODE_KEY, newMode);
-  };
 
   const setCustomThemeJson = (jsonString: string): boolean => {
     try {
@@ -81,22 +61,23 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [customThemeJson]);
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", mode);
-  }, [mode]);
+    document.documentElement.setAttribute("data-theme", "dark");
+    document.documentElement.classList.add("dark");
+    document.documentElement.style.colorScheme = "dark";
+    localStorage.setItem(LOCAL_STORAGE_MODE_KEY, "dark");
+  }, []);
 
   return (
     <ThemeContext.Provider
       value={{
-        mode,
-        toggleMode,
-        setMode,
+        mode: "dark",
         customThemeJson,
         setCustomThemeJson,
         clearCustomTheme,
         activeTheme,
       }}
     >
-      <Theme theme={activeTheme} mode={mode as ThemeMode}>
+      <Theme theme={activeTheme} mode="dark">
         {children}
       </Theme>
     </ThemeContext.Provider>

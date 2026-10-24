@@ -1,8 +1,7 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { SideNav, SideNavSection, SideNavItem, SideNavHeading, VStack } from "@astryxdesign/core";
 import { useMediaQuery } from "@astryxdesign/core/hooks";
-import { Home, Info, Boxes, Container, Sun, Moon } from "lucide-react";
-import { useAppTheme } from "../context/ThemeContext";
+import { Home, Info, Boxes, Container } from "lucide-react";
 
 // `isExact` lets the caller distinguish section roots (which should highlight
 // on exact match) from section entries (which should highlight on any nested
@@ -17,7 +16,6 @@ function isSelected(currentPath: string, target: string, exact: boolean): boolea
 function NavItems() {
   const location = useLocation();
   const currentPath = location.pathname;
-  const { mode, toggleMode } = useAppTheme();
 
   return (
     <VStack gap={1} width="100%">
@@ -56,14 +54,6 @@ function NavItems() {
         />
       </SideNavSection>
 
-      <SideNavSection title="THEME">
-        <SideNavItem
-          label={mode === "dark" ? "Light Mode" : "Dark Mode"}
-          icon={mode === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          onClick={toggleMode}
-          size="md"
-        />
-      </SideNavSection>
     </VStack>
   );
 }
