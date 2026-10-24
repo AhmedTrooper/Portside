@@ -5,7 +5,7 @@ import { Button } from "@astryxdesign/core/Button";
 import { DropdownMenu } from "@astryxdesign/core/DropdownMenu";
 import { Heading, Text } from "@astryxdesign/core/Text";
 import { AlertDialog } from "@astryxdesign/core/AlertDialog";
-import { useToast } from "@astryxdesign/core/Toast";
+import { usePortsideToast as useToast } from "../../../hooks/usePortsideToast";
 import {
   Boxes,
   Container as ContainerIcon,

@@ -1,5 +1,6 @@
 import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/react-router";
 import { AppShell } from "@astryxdesign/core";
+import { ToastViewport } from "@astryxdesign/core/Toast";
 import { ThemeProvider } from "./context/ThemeContext";
 import { Sidebar } from "./components/Sidebar";
 import HomePage from "./features/home/HomePage";
@@ -39,7 +40,11 @@ function AppLayout() {
 const rootRoute = createRootRoute({
   component: () => (
     <ThemeProvider>
-      <AppLayout />
+      <div data-portside-notifications>
+        <ToastViewport position="topStart" maxVisible={3}>
+          <AppLayout />
+        </ToastViewport>
+      </div>
     </ThemeProvider>
   ),
 });

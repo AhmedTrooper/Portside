@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useToast } from "@astryxdesign/core/Toast";
+import { usePortsideToast as useToast } from "../../../hooks/usePortsideToast";
 import { stringifyError } from "../shared/types";
 import { isImageOperation, type ImageOperation } from "./imageOperations";
 

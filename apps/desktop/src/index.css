@@ -28,6 +28,29 @@ button:focus-visible,
   filter: brightness(1.12);
 }
 
+/* Astryx's toast viewport exposes corner positions only. Center this app's
+   single native viewport relative to the whole webview, outside the sidebar. */
+[data-portside-notifications] > [role="region"][popover] {
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  inset-block-end: auto;
+  inset-inline-end: auto;
+  transform: translate(-50%, -50%);
+  align-items: center;
+  width: min(480px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+}
+
+[data-portside-notifications] > [role="region"][popover] > [data-toast-id] {
+  width: 100%;
+}
+
+[data-portside-notifications] .astryx-toast {
+  width: 100%;
+  max-width: 100%;
+}
+
 /* Disable right-click context menu */
 body {
   -webkit-user-select: none;
