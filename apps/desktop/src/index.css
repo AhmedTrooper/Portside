@@ -10,6 +10,24 @@ body {
   font-family: 'Inter Variable', sans-serif;
 }
 
+/* App-wide focus policy, including Astryx's outline and inset-shadow rings. */
+:focus,
+:focus-visible,
+:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Keep keyboard focus visible without drawing an extra outline. */
+a:focus-visible {
+  text-decoration: underline;
+}
+
+button:focus-visible,
+[role="button"]:focus-visible {
+  filter: brightness(1.12);
+}
+
 /* Disable right-click context menu */
 body {
   -webkit-user-select: none;
