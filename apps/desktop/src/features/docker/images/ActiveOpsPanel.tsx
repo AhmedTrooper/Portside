@@ -95,13 +95,13 @@ function OperationRow({ op }: OperationRowProps) {
 
   return (
     <div className="border-b border-default last:border-b-0 px-3 py-2">
-      <Stack direction="horizontal" gap={2} vAlign="center">
+      <Stack direction="horizontal" gap={2} vAlign="center" wrap="wrap">
         <Icon
           icon={isRunning ? Loader2 : IconComp}
           size="sm"
           className={isRunning ? "animate-spin" : ""}
         />
-        <span className="text-sm font-medium truncate flex-1" title={op.target}>
+        <span className="min-w-0 [overflow-wrap:anywhere] text-sm font-medium flex-1" title={op.target}>
           {op.target}
         </span>
         <span className="text-xs opacity-70">{statusLabel(op)}</span>
@@ -140,7 +140,7 @@ function OperationRow({ op }: OperationRowProps) {
         </div>
       )}
       {!isRunning && op.message && (
-        <div className="mt-1 text-xs opacity-70 truncate" title={op.message}>
+        <div className="[overflow-wrap:anywhere] mt-1 text-xs opacity-70" title={op.message}>
           {op.message}
         </div>
       )}
@@ -227,8 +227,8 @@ export function ActiveOpsPanel() {
   const entries = Object.values(ops).sort((a, b) => b.started_at_ms - a.started_at_ms);
 
   return (
-    <Card className="w-full h-full min-h-0 flex flex-col" style={DOCKER_CARD_STYLE}>
-      <Stack direction="horizontal" gap={2} vAlign="center" className="px-4 py-3 border-b border-default">
+    <Card padding={0} className="w-full h-full min-w-0 min-h-0 flex flex-col" style={DOCKER_CARD_STYLE}>
+      <Stack direction="horizontal" gap={2} vAlign="center" wrap="wrap" className="shrink-0 px-4 py-3 border-b border-default">
         <Heading level={3}>Operations</Heading>
         <span className="text-xs opacity-70">
           {entries.length === 0 ? "Idle" : `${entries.length} active`}

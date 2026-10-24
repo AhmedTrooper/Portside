@@ -16,7 +16,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { DockerGrid } from "../shared/DockerGrid";
-import { DockerCard } from "../shared/DockerCard";
+import { DockerCard, DockerCardHeader, DockerCardIdentity, DockerCardMetaGrid, DockerCardMeta as Meta } from "../shared/DockerCard";
 import { StatusPill } from "../shared/StatusPill";
 import { useDockerSnapshot } from "../shared/useDockerSnapshot";
 import {
@@ -148,7 +148,7 @@ export function ComposeGrid() {
         onSearch={setSearch}
         searchPlaceholder="Search Compose projects"
         toolbarActions={
-          <div className="inline-flex items-center gap-2">
+          <div className="inline-flex flex-wrap items-center gap-2">
             <Button
               label="Deploy"
               variant="primary"
@@ -250,19 +250,19 @@ function ComposeCard({ project, isBusy, onAction }: ComposeCardProps) {
 
   return (
     <DockerCard>
-      <div className="flex items-start justify-between gap-2 min-w-0">
-        <div className="min-w-0 flex items-start gap-2">
+      <DockerCardHeader>
+        <DockerCardIdentity>
           <Boxes size={18} aria-hidden className="mt-0.5 shrink-0 opacity-80" />
-          <div className="min-w-0">
-            <Heading level={4} className="truncate">
+          <div className="min-w-0 flex-1">
+            <Heading level={4} className="docker-card-text">
               {project.Name}
             </Heading>
-            <Text type="supporting" color="secondary" className="block truncate">
+            <Text type="supporting" color="secondary" className="docker-card-text block">
               {files.length === 1 ? baseName(files[0]) : `${files.length} Compose files`}
             </Text>
           </div>
-        </div>
-        <div className="flex items-center gap-1 shrink-0">
+        </DockerCardIdentity>
+        <div className="flex items-center gap-1 shrink-0 ml-auto">
           <StatusPill state={state} label={statusLabel} />
           <DropdownMenu
             button={{
@@ -303,23 +303,23 @@ function ComposeCard({ project, isBusy, onAction }: ComposeCardProps) {
             ]}
           />
         </div>
-      </div>
+      </DockerCardHeader>
 
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+      <DockerCardMetaGrid>
         <Meta label="Status" value={project.Status} />
         <Meta
           label="Config files"
           value={files.length === 1 ? baseName(files[0]) : `${files.length} files`}
         />
-      </div>
+      </DockerCardMetaGrid>
 
       <div className="mt-auto min-w-0">
-        <span className="text-[10px] uppercase tracking-wide opacity-60">Compose file</span>
+        <Text type="docker-meta-label" display="block" color="secondary">Compose file</Text>
         <div className="mt-1 space-y-1">
           {files.slice(0, 2).map((file) => (
             <div
               key={file}
-              className="font-mono text-[11px] truncate opacity-80"
+              className="[overflow-wrap:anywhere] font-mono text-[11px] opacity-80"
               title={file}
             >
               {file}
@@ -331,7 +331,7 @@ function ComposeCard({ project, isBusy, onAction }: ComposeCardProps) {
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-2 pt-1">
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 shrink-0">
         <Button
           label={isRunning ? "Stop" : "Up"}
           variant={isRunning ? "secondary" : "primary"}
@@ -342,20 +342,11 @@ function ComposeCard({ project, isBusy, onAction }: ComposeCardProps) {
           isLoading={isBusy}
           onClick={() => onAction(isRunning ? "stop" : "up")}
         />
-        <span className="text-[11px] opacity-50 truncate" title={project.ConfigFiles}>
+        <span className="max-w-full [overflow-wrap:anywhere] text-[11px] opacity-50" title={project.ConfigFiles}>
           {files.length ? baseName(files[0]) : "No config file"}
         </span>
       </div>
     </DockerCard>
-  );
-}
-
-function Meta({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <span className="text-[10px] uppercase tracking-wide opacity-60">{label}</span>
-      <div className="truncate">{value}</div>
-    </div>
   );
 }
 

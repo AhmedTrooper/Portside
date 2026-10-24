@@ -8,8 +8,8 @@ export function ImagePage() {
   const isOpsPanelOpen = useUIStore((s) => s.isOpsPanelOpen);
 
   return (
-    <VStack gap={4} className="p-6 w-full h-full min-h-0">
-      <VStack gap={1} className="w-full">
+    <VStack gap={4} className="p-3 sm:p-6 w-full min-w-0 min-h-full">
+      <VStack gap={1} className="w-full min-w-0 shrink-0 [overflow-wrap:anywhere]">
         <Heading level={1}>Docker Images</Heading>
         <Text type="body" color="secondary">
           Browse local images, pull new ones, and watch long operations stream
@@ -17,15 +17,12 @@ export function ImagePage() {
         </Text>
       </VStack>
 
-      {/* Main column = ImageGrid (flex-1); right rail = ActiveOpsPanel.
-          The ops panel is collapsible and starts hidden so the grid owns
-          the screen by default. When opened it eats a fixed 340px. */}
-      <HStack gap={4} align="stretch" className="w-full h-full min-h-0 flex-1">
-        <div className="flex-1 min-h-0 min-w-0">
+      <HStack gap={4} wrap="wrap" align="stretch" className="w-full min-w-0">
+        <div className="flex-1 basis-[560px] min-w-0">
           <ImageGrid />
         </div>
         {isOpsPanelOpen && (
-          <div className="w-[340px] min-h-0 shrink-0">
+          <div className="flex-1 basis-[340px] min-w-0 h-[320px]">
             <ActiveOpsPanel />
           </div>
         )}

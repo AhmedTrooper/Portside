@@ -14,7 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { DockerGrid } from "../shared/DockerGrid";
-import { DockerCard } from "../shared/DockerCard";
+import { DockerCard, DockerCardHeader, DockerCardIdentity, DockerCardMetaGrid, DockerCardMeta as Meta } from "../shared/DockerCard";
 import { useDockerSnapshot } from "../shared/useDockerSnapshot";
 import {
   imageReference,
@@ -111,7 +111,7 @@ export function ImageGrid() {
         onSearch={setSearch}
         searchPlaceholder="Search images"
         toolbarActions={
-          <div className="inline-flex items-center gap-2">
+          <div className="inline-flex flex-wrap items-center gap-2">
             <Button
               label="Pull"
               variant="primary"
@@ -206,18 +206,18 @@ function ImageCard({ image, onRemove }: ImageCardProps) {
 
   return (
     <DockerCard>
-      <div className="flex items-start justify-between gap-2 min-w-0">
-        <div className="min-w-0 flex items-start gap-2">
+      <DockerCardHeader>
+        <DockerCardIdentity>
           <Layers size={18} aria-hidden className="mt-0.5 shrink-0 opacity-80" />
-          <div className="min-w-0">
-            <Heading level={4} className="truncate">
+          <div className="min-w-0 flex-1">
+            <Heading level={4} className="docker-card-text">
               {dangling ? "Dangling image" : repositoryDisplay(image)}
             </Heading>
-            <Text type="supporting" color="secondary" className="block truncate">
+            <Text type="supporting" color="secondary" className="docker-card-text block">
               {dangling ? shortId(image.ID) : `${tagDisplay(image)} · ${shortId(image.ID)}`}
             </Text>
           </div>
-        </div>
+        </DockerCardIdentity>
         <DropdownMenu
           button={{
             label: `Actions for ${reference}`,
@@ -240,7 +240,7 @@ function ImageCard({ image, onRemove }: ImageCardProps) {
             },
           ]}
         />
-      </div>
+      </DockerCardHeader>
 
       {dangling ? (
         <div
@@ -254,7 +254,7 @@ function ImageCard({ image, onRemove }: ImageCardProps) {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+      <DockerCardMetaGrid>
         <Meta label="Size" value={image.Size} />
         <Meta label="Created" value={image.CreatedSince} />
         <Meta
@@ -266,24 +266,15 @@ function ImageCard({ image, onRemove }: ImageCardProps) {
           }
         />
         <Meta label="Image ID" value={shortId(image.ID, 16)} />
-      </div>
+      </DockerCardMetaGrid>
 
-      <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-        <span className="text-[11px] opacity-50 font-mono" title={image.ID}>
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1">
+        <span className="max-w-full [overflow-wrap:anywhere] text-[11px] opacity-50 font-mono" title={image.ID}>
           {image.Digest && image.Digest !== "<none>"
             ? `digest ${shortId(image.Digest.replace("sha256:", ""), 12)}`
             : reference}
         </span>
       </div>
     </DockerCard>
-  );
-}
-
-function Meta({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <span className="text-[10px] uppercase tracking-wide opacity-60">{label}</span>
-      <div className="truncate">{value}</div>
-    </div>
   );
 }

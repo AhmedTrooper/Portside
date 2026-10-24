@@ -14,7 +14,7 @@ import {
   Wind,
 } from "lucide-react";
 import { DockerGrid } from "../shared/DockerGrid";
-import { DockerCard } from "../shared/DockerCard";
+import { DockerCard, DockerCardHeader, DockerCardIdentity, DockerCardMetaGrid, DockerCardMeta as Meta } from "../shared/DockerCard";
 import { useDockerSnapshot } from "../shared/useDockerSnapshot";
 import {
   parseLabels,
@@ -119,7 +119,7 @@ export function VolumeGrid() {
         onSearch={setSearch}
         searchPlaceholder="Search volumes"
         toolbarActions={
-          <div className="inline-flex items-center gap-2">
+          <div className="inline-flex flex-wrap items-center gap-2">
             <Button
               label="Create"
               variant="primary"
@@ -221,18 +221,18 @@ function VolumeCard({ volume, onRemove }: VolumeCardProps) {
 
   return (
     <DockerCard>
-      <div className="flex items-start justify-between gap-2 min-w-0">
-        <div className="min-w-0 flex items-start gap-2">
+      <DockerCardHeader>
+        <DockerCardIdentity>
           <Database size={18} aria-hidden className="mt-0.5 shrink-0 opacity-80" />
-          <div className="min-w-0">
-            <Heading level={4} className="truncate">
+          <div className="min-w-0 flex-1">
+            <Heading level={4} className="docker-card-text">
               {volume.Name}
             </Heading>
-            <Text type="supporting" color="secondary" className="block truncate">
+            <Text type="supporting" color="secondary" className="docker-card-text block">
               {volume.Driver} · {volume.Scope}
             </Text>
           </div>
-        </div>
+        </DockerCardIdentity>
         <DropdownMenu
           button={{
             label: `Actions for ${volume.Name}`,
@@ -250,20 +250,20 @@ function VolumeCard({ volume, onRemove }: VolumeCardProps) {
             },
           ]}
         />
-      </div>
+      </DockerCardHeader>
 
       <div className="flex flex-wrap gap-1.5">
         {composeProject ? <Tag label={`compose · ${composeProject}`} /> : <Tag label="standalone" />}
         <Tag label={volume.Driver} />
       </div>
 
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+      <DockerCardMetaGrid>
         <Meta label="Scope" value={volume.Scope} />
         <Meta label="Size" value={volume.Size && volume.Size !== "N/A" ? volume.Size : "Unknown"} />
-      </div>
+      </DockerCardMetaGrid>
 
       <div className="mt-auto min-w-0">
-        <span className="text-[10px] uppercase tracking-wide opacity-60">Mountpoint</span>
+        <Text type="docker-meta-label" display="block" color="secondary">Mountpoint</Text>
         <div className="mt-1 font-mono text-[11px] break-all opacity-80">{mountpoint}</div>
       </div>
     </DockerCard>
@@ -273,7 +273,7 @@ function VolumeCard({ volume, onRemove }: VolumeCardProps) {
 function Tag({ label }: { label: string }) {
   return (
     <span
-      className="rounded px-1.5 py-0.5 text-[11px]"
+      className="max-w-full [overflow-wrap:anywhere] rounded px-1.5 py-0.5 text-[11px]"
       style={{
         backgroundColor: "var(--color-background-muted)",
         color: "var(--color-text-secondary)",
@@ -281,14 +281,5 @@ function Tag({ label }: { label: string }) {
     >
       {label}
     </span>
-  );
-}
-
-function Meta({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <span className="text-[10px] uppercase tracking-wide opacity-60">{label}</span>
-      <div className="truncate">{value}</div>
-    </div>
   );
 }

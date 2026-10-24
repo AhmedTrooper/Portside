@@ -6,10 +6,8 @@ import { Toolbar } from "@astryxdesign/core/Toolbar";
 import { TextInput } from "@astryxdesign/core/TextInput";
 import { Button } from "@astryxdesign/core/Button";
 import { Heading, Text } from "@astryxdesign/core/Text";
-import { DOCKER_CARD_STYLE } from "./DockerCard";
-
-export const GRID_CLASS =
-  "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5";
+import { HStack, VStack } from "@astryxdesign/core/Stack";
+import { DockerCardGrid, DOCKER_CARD_STYLE } from "./DockerCard";
 
 interface DockerGridProps {
   /** Accessible label for the toolbar. */
@@ -32,8 +30,8 @@ interface DockerGridProps {
 }
 
 /**
- * Full-height card + toolbar + responsive card grid used by every Docker
- * resource page. The grid owns the scroll area so the toolbar stays pinned.
+ * Card + wrapping toolbar + responsive grid used by every Docker resource
+ * page. Page scrolling keeps all cards reachable in short or narrow windows.
  */
 export function DockerGrid({
   label,
@@ -56,53 +54,54 @@ export function DockerGrid({
     <Card
       padding={0}
       elevation="low"
-      className="w-full h-full min-h-0 flex flex-col"
+      className="w-full min-w-0 flex flex-col"
       style={DOCKER_CARD_STYLE}
     >
       <Toolbar
         label={label}
         size="md"
         dividers={["bottom"]}
+        className="min-w-0 shrink-0"
         startContent={
-          <div className="inline-flex items-center gap-2 min-w-0">
-            <IconComponent size={18} aria-hidden className="shrink-0" />
-            <Heading level={3}>{title}</Heading>
-            {meta ? (
-              <span className="text-xs opacity-70 truncate">{meta}</span>
-            ) : null}
-          </div>
-        }
-        endContent={
-          <div className="inline-flex items-center gap-2">
-            <div className="w-[220px] max-w-[38vw]">
-              <TextInput
-                label={searchPlaceholder}
-                isLabelHidden
-                value={search}
-                onChange={onSearch}
-                placeholder={searchPlaceholder}
-                size="sm"
-              />
-            </div>
-            {search ? (
-              <Button
-                label="Clear search"
-                variant="ghost"
-                size="sm"
-                isIconOnly
-                icon={<X size={14} aria-hidden />}
-                onClick={() => onSearch("")}
-              />
-            ) : null}
-            {toolbarActions}
-          </div>
+          <HStack gap={2} wrap="wrap" align="center" width="100%" className="min-w-0">
+            <HStack gap={1} wrap="wrap" align="center" className="min-w-0">
+              <IconComponent size={18} aria-hidden className="shrink-0" />
+              <Heading level={3} className="docker-card-text">{title}</Heading>
+              {meta ? (
+                <Text type="supporting" color="secondary" textWrap="wrap" className="docker-card-text">{meta}</Text>
+              ) : null}
+            </HStack>
+            <HStack gap={1} wrap="wrap" align="center" justify="end" className="flex-1 basis-[280px] min-w-0">
+              <div className="flex-1 basis-[180px] min-w-0">
+                <TextInput
+                  label={searchPlaceholder}
+                  isLabelHidden
+                  value={search}
+                  onChange={onSearch}
+                  placeholder={searchPlaceholder}
+                  size="sm"
+                />
+              </div>
+              {search ? (
+                <Button
+                  label="Clear search"
+                  variant="ghost"
+                  size="sm"
+                  isIconOnly
+                  icon={<X size={14} aria-hidden />}
+                  onClick={() => onSearch("")}
+                />
+              ) : null}
+              {toolbarActions}
+            </HStack>
+          </HStack>
         }
       />
 
       {error ? (
         <div
           role="alert"
-          className="mx-4 mt-3 rounded-md px-3 py-2 text-sm"
+          className="shrink-0 mx-4 mt-3 rounded-md px-3 py-2 text-sm [overflow-wrap:anywhere]"
           style={{
             color: "var(--color-text-red)",
             backgroundColor: "var(--color-background-red)",
@@ -113,29 +112,29 @@ export function DockerGrid({
         </div>
       ) : null}
 
-      <div className="flex-1 min-h-0 overflow-auto p-5">
+      <VStack padding={3} className="min-w-0">
         {isLoading && itemCount === 0 ? (
           <GridSkeleton />
         ) : itemCount === 0 ? (
-          <div className="h-full min-h-[220px] flex flex-col items-center justify-center gap-2 text-center px-4">
+          <VStack minHeight={220} gap={1} align="center" justify="center" padding={2} className="text-center min-w-0">
             <Inbox size={28} aria-hidden className="opacity-50" />
             <Heading level={3}>{emptyTitle}</Heading>
             <Text type="supporting" color="secondary">
               {emptyDescription}
             </Text>
             {emptyAction}
-          </div>
+          </VStack>
         ) : (
-          <div className={GRID_CLASS}>{children}</div>
+          <DockerCardGrid>{children}</DockerCardGrid>
         )}
-      </div>
+      </VStack>
     </Card>
   );
 }
 
 function GridSkeleton() {
   return (
-    <div className={GRID_CLASS} aria-hidden>
+    <DockerCardGrid aria-hidden>
       {Array.from({ length: 6 }, (_, index) => (
         <Card
           key={index}
@@ -151,6 +150,6 @@ function GridSkeleton() {
           <div className="mt-2 h-3 w-3/5 rounded bg-current opacity-10" />
         </Card>
       ))}
-    </div>
+    </DockerCardGrid>
   );
 }

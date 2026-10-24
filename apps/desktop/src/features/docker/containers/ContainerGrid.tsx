@@ -20,7 +20,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { DockerGrid } from "../shared/DockerGrid";
-import { DockerCard } from "../shared/DockerCard";
+import { DockerCard, DockerCardHeader, DockerCardIdentity, DockerCardMetaGrid, DockerCardMeta as Meta } from "../shared/DockerCard";
 import { StatusPill } from "../shared/StatusPill";
 import { useDockerSnapshot } from "../shared/useDockerSnapshot";
 import {
@@ -348,25 +348,25 @@ function ContainerCard({
 
   return (
     <DockerCard>
-      <div className="flex items-start justify-between gap-2 min-w-0">
-        <div className="min-w-0 flex items-start gap-2">
+      <DockerCardHeader>
+        <DockerCardIdentity>
           <ContainerIcon size={18} aria-hidden className="mt-0.5 shrink-0 opacity-80" />
-          <div className="min-w-0" title={container.Names}>
-            <Heading level={4} className="truncate">
+          <div className="min-w-0 flex-1" title={container.Names}>
+            <Heading level={4} className="docker-card-text">
               {container.Names}
             </Heading>
             <div title={container.Image}>
               <Text
                 type="supporting"
                 color="secondary"
-                className="block truncate"
+                className="docker-card-text block"
               >
                 {container.Image}
               </Text>
             </div>
           </div>
-        </div>
-        <div className="flex items-center gap-1 shrink-0">
+        </DockerCardIdentity>
+        <div className="flex items-center gap-1 shrink-0 ml-auto">
           <StatusPill state={container.State} />
           <DropdownMenu
             button={{
@@ -381,18 +381,18 @@ function ContainerCard({
             items={menuItems}
           />
         </div>
-      </div>
+      </DockerCardHeader>
 
       {isCompose ? (
         <div className="flex items-center gap-1.5 text-[11px] opacity-70 min-w-0">
           <Boxes size={12} aria-hidden className="shrink-0" />
-          <span className="truncate" title={`Compose project ${composeProject}`}>
+          <span className="min-w-0 [overflow-wrap:anywhere]" title={`Compose project ${composeProject}`}>
             Managed by Compose · {composeProject}
           </span>
         </div>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+      <DockerCardMetaGrid>
         <Meta label="Status" value={container.Status} />
         <Meta
           label="Created"
@@ -403,10 +403,10 @@ function ContainerCard({
           value={composeService ?? composeProject ?? "Standalone"}
         />
         <Meta label="Networks" value={container.Networks || "None"} />
-      </div>
+      </DockerCardMetaGrid>
 
       <div className="min-w-0">
-        <span className="text-[10px] uppercase tracking-wide opacity-60">Ports</span>
+        <Text type="docker-meta-label" display="block" color="secondary">Ports</Text>
         {ports.length === 0 ? (
           <div className="text-xs opacity-70 mt-1">No published ports</div>
         ) : (
@@ -414,7 +414,7 @@ function ContainerCard({
             {ports.slice(0, 4).map((port) => (
               <span
                 key={port}
-                className="rounded px-1.5 py-0.5 text-[11px]"
+                className="max-w-full [overflow-wrap:anywhere] rounded px-1.5 py-0.5 text-[11px]"
                 style={{
                   backgroundColor: "var(--color-background-muted)",
                   color: "var(--color-text-secondary)",
@@ -431,7 +431,7 @@ function ContainerCard({
         )}
       </div>
 
-      <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1 shrink-0">
         <Button
           label={primaryLabel}
           variant={
@@ -466,22 +466,11 @@ function ContainerCard({
             }
           }}
         />
-        <span className="text-[11px] opacity-50 font-mono" title={container.ID}>
+        <span className="max-w-full [overflow-wrap:anywhere] text-[11px] opacity-50 font-mono" title={container.ID}>
           {shortId(container.ID)}
         </span>
       </div>
     </DockerCard>
-  );
-}
-
-function Meta({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <span className="text-[10px] uppercase tracking-wide opacity-60">{label}</span>
-      <div className="truncate" title={value}>
-        {value}
-      </div>
-    </div>
   );
 }
 

@@ -10,6 +10,13 @@
 import {defineTheme, defineSyntaxTheme} from '@astryxdesign/core/theme';
 import {y2kIconRegistry} from './icons';
 
+declare module '@astryxdesign/core/theme' {
+  interface CustomTextTypes {
+    'docker-meta-label': true;
+    'docker-meta-value': true;
+  }
+}
+
 const y2kSyntax = defineSyntaxTheme({
   name: 'xds-y2k',
   tokens: {
@@ -217,6 +224,25 @@ export const y2kTheme = defineTheme({
     // Display sizes use a Crimson Text serif, distinct from the Poppins
     // used for body/headings.
     text: {
+      'type:docker-meta-label': {
+        fontSize: '11px',
+        lineHeight: '1.5',
+        textTransform: 'uppercase',
+        letterSpacing: '0.04em',
+        overflow: 'visible',
+        overflowWrap: 'anywhere',
+      },
+      'type:docker-meta-value': {
+        fontSize: '12px',
+        lineHeight: '1.6',
+        overflow: 'visible',
+        overflowWrap: 'anywhere',
+      },
+      'docker-card-text': {
+        overflowWrap: 'anywhere',
+        whiteSpace: 'normal',
+        lineHeight: '1.5',
+      },
       'type:display-1': {
         fontFamily: '"Crimson Text", Georgia, "Times New Roman", Times, serif',
       },
@@ -345,6 +371,24 @@ export const y2kTheme = defineTheme({
       base: {
         borderRadius: 'var(--radius-container)',
         padding: 'var(--spacing-3)',
+      },
+      'docker-resource-card': {
+        overflow: 'visible',
+        minHeight: 'min-content',
+      },
+    },
+
+    heading: {
+      'docker-card-text': {
+        overflowWrap: 'anywhere',
+        whiteSpace: 'normal',
+        lineHeight: '1.5',
+      },
+    },
+
+    'layout-content': {
+      base: {
+        minWidth: '0px',
       },
     },
 

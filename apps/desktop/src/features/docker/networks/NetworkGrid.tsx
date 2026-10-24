@@ -16,7 +16,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { DockerGrid } from "../shared/DockerGrid";
-import { DockerCard } from "../shared/DockerCard";
+import { DockerCard, DockerCardHeader, DockerCardIdentity, DockerCardMetaGrid, DockerCardMeta as Meta } from "../shared/DockerCard";
 import { useDockerSnapshot } from "../shared/useDockerSnapshot";
 import {
   parseLabels,
@@ -120,7 +120,7 @@ export function NetworkGrid() {
         onSearch={setSearch}
         searchPlaceholder="Search networks"
         toolbarActions={
-          <div className="inline-flex items-center gap-2">
+          <div className="inline-flex flex-wrap items-center gap-2">
             <Button
               label="Create"
               variant="primary"
@@ -208,18 +208,18 @@ function NetworkCard({ network, onRemove }: NetworkCardProps) {
 
   return (
     <DockerCard>
-      <div className="flex items-start justify-between gap-2 min-w-0">
-        <div className="min-w-0 flex items-start gap-2">
+      <DockerCardHeader>
+        <DockerCardIdentity>
           <GitBranch size={18} aria-hidden className="mt-0.5 shrink-0 opacity-80" />
-          <div className="min-w-0">
-            <Heading level={4} className="truncate">
+          <div className="min-w-0 flex-1">
+            <Heading level={4} className="docker-card-text">
               {network.Name}
             </Heading>
-            <Text type="supporting" color="secondary" className="block truncate">
+            <Text type="supporting" color="secondary" className="docker-card-text block">
               {network.Driver} · {network.Scope}
             </Text>
           </div>
-        </div>
+        </DockerCardIdentity>
         <DropdownMenu
           button={{
             label: `Actions for ${network.Name}`,
@@ -242,7 +242,7 @@ function NetworkCard({ network, onRemove }: NetworkCardProps) {
             },
           ]}
         />
-      </div>
+      </DockerCardHeader>
 
       <div className="flex flex-wrap items-center gap-1.5">
         {system ? (
@@ -258,12 +258,12 @@ function NetworkCard({ network, onRemove }: NetworkCardProps) {
       </div>
 
       {isCompose ? (
-        <div className="text-[11px] opacity-70">
+        <div className="[overflow-wrap:anywhere] text-[11px] opacity-70">
           Take the Compose project down to remove this network.
         </div>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+      <DockerCardMetaGrid>
         <Meta label="Driver" value={network.Driver} />
         <Meta label="Scope" value={network.Scope} />
         <Meta label="Network ID" value={shortId(network.ID, 16)} mono />
@@ -271,11 +271,11 @@ function NetworkCard({ network, onRemove }: NetworkCardProps) {
           label="Labels"
           value={Object.keys(labels).length ? `${Object.keys(labels).length}` : "None"}
         />
-      </div>
+      </DockerCardMetaGrid>
 
       <div className="mt-auto min-w-0">
-        <span className="text-[10px] uppercase tracking-wide opacity-60">Configuration</span>
-        <div className="mt-1 text-xs truncate" title={network.Labels || "No labels"}>
+        <Text type="docker-meta-label" display="block" color="secondary">Configuration</Text>
+        <div className="[overflow-wrap:anywhere] mt-1 text-xs" title={network.Labels || "No labels"}>
           {labelEntries.length === 0
             ? "No labels"
             : labelEntries.map(([key, value]) => `${key.replace(/^com\.docker\.compose\./, "")}=${value}`).join(" · ")}
@@ -288,7 +288,7 @@ function NetworkCard({ network, onRemove }: NetworkCardProps) {
 function Tag({ label, icon }: { label: string; icon?: ReactNode }) {
   return (
     <span
-      className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px]"
+      className="max-w-full [overflow-wrap:anywhere] inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px]"
       style={{
         backgroundColor: "var(--color-background-muted)",
         color: "var(--color-text-secondary)",
@@ -297,14 +297,5 @@ function Tag({ label, icon }: { label: string; icon?: ReactNode }) {
       {icon}
       {label}
     </span>
-  );
-}
-
-function Meta({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="min-w-0">
-      <span className="text-[10px] uppercase tracking-wide opacity-60">{label}</span>
-      <div className={`truncate ${mono ? "font-mono" : ""}`}>{value}</div>
-    </div>
   );
 }

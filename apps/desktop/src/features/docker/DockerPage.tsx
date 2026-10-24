@@ -13,7 +13,7 @@ import { Card } from "@astryxdesign/core/Card";
 import { Button } from "@astryxdesign/core/Button";
 import { Link } from "@tanstack/react-router";
 import { useDockerSnapshot } from "./shared/useDockerSnapshot";
-import { DOCKER_CARD_RADIUS, DOCKER_CARD_STYLE } from "./shared/DockerCard";
+import { DockerCardGrid, DOCKER_CARD_RADIUS, DOCKER_CARD_STYLE } from "./shared/DockerCard";
 import { composeBaseState } from "./shared/types";
 
 interface ResourceCardProps {
@@ -52,9 +52,9 @@ export function DockerPage() {
   ).length;
 
   return (
-    <VStack gap={4} className="p-6 w-full min-h-full">
-      <div className="flex items-start justify-between gap-4">
-        <VStack gap={1}>
+    <VStack gap={4} className="p-3 sm:p-6 w-full min-w-0 min-h-full">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <VStack gap={1} className="flex-1 basis-[240px] min-w-0 shrink-0 [overflow-wrap:anywhere]">
           <Heading level={1}>Docker Management</Heading>
           <Text type="body" color="secondary">
             Live overview of containers, images, networks, volumes, and Compose
@@ -73,7 +73,7 @@ export function DockerPage() {
       {error ? (
         <div
           role="alert"
-          className="rounded-md px-3 py-2 text-sm"
+          className="rounded-md px-3 py-2 text-sm [overflow-wrap:anywhere]"
           style={{
             color: "var(--color-text-red)",
             backgroundColor: "var(--color-background-red)",
@@ -84,7 +84,7 @@ export function DockerPage() {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 w-full mt-2">
+      <DockerCardGrid className="mt-2">
         <ResourceCard
           to="/docker/containers"
           icon={ContainerIcon}
@@ -130,7 +130,7 @@ export function DockerPage() {
           detail={`${runningProjects} running`}
           isLoading={isLoading}
         />
-      </div>
+      </DockerCardGrid>
     </VStack>
   );
 }
@@ -168,13 +168,13 @@ function ResourceCard({
           </span>
           <ArrowUpRight size={18} aria-hidden className="opacity-40" />
         </div>
-        <Heading level={3} className="mt-4">
+        <Heading level={3} className="docker-card-text mt-4">
           {title}
         </Heading>
-        <Text type="supporting" color="secondary" className="mt-1 block">
+        <Text type="supporting" color="secondary" className="docker-card-text mt-1 block">
           {description}
         </Text>
-        <div className="mt-5 flex items-baseline gap-2">
+        <div className="mt-5 flex flex-wrap items-baseline gap-2">
           <span className="text-2xl font-semibold tabular-nums">
             {isLoading && count === 0 ? "—" : count}
           </span>
