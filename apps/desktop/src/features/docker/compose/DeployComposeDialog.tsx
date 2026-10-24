@@ -6,7 +6,7 @@ import { Button } from "@astryxdesign/core/Button";
 import { Field } from "@astryxdesign/core/Field";
 import { TextInput } from "@astryxdesign/core/TextInput";
 import { HStack, VStack } from "@astryxdesign/core/Stack";
-import { FileCode2 } from "lucide-react";
+import { FileCode2, Play } from "lucide-react";
 
 interface DeployComposeDialogProps {
   isOpen: boolean;
@@ -65,9 +65,27 @@ export function DeployComposeDialog({
   };
 
   return (
-    <Dialog isOpen={isOpen} onOpenChange={handleOpenChange} width="520px" purpose="form">
-      <Layout height="auto">
-        <DialogHeader title="Deploy Compose project" onOpenChange={handleOpenChange} />
+    <Dialog isOpen={isOpen} onOpenChange={handleOpenChange} width="520px" maxHeight="90dvh" purpose="form">
+      <Layout
+        header={<DialogHeader title="Deploy Compose project" onOpenChange={handleOpenChange} />}
+        footer={
+          <LayoutFooter hasDivider>
+            <HStack gap={2} justify="end" wrap="wrap">
+              <Button
+                label="Cancel"
+                variant="secondary"
+                onClick={() => handleOpenChange(false)}
+              />
+              <Button
+                label="Start"
+                variant="primary"
+                icon={<Play size={14} aria-hidden />}
+                onClick={submit}
+              />
+            </HStack>
+          </LayoutFooter>
+        }
+      >
         <LayoutContent>
           <VStack gap={3}>
             <Field
@@ -78,8 +96,8 @@ export function DeployComposeDialog({
               status={error ? { type: "error", message: error } : undefined}
               labelIcon={<FileCode2 size={14} />}
             >
-              <HStack gap={2} align="end">
-                <div className="flex-1 min-w-0">
+              <HStack gap={2} align="end" wrap="wrap">
+                <div className="flex-1 basis-[240px] min-w-0">
                   <TextInput
                     id={pathId}
                     label="Compose file"
@@ -87,6 +105,7 @@ export function DeployComposeDialog({
                     value={path}
                     onChange={setPath}
                     placeholder="/path/to/docker-compose.yml"
+                    onEnter={submit}
                   />
                 </div>
                 <Button label="Browse" variant="secondary" onClick={() => void browse()} />
@@ -110,16 +129,6 @@ export function DeployComposeDialog({
             </Field>
           </VStack>
         </LayoutContent>
-        <LayoutFooter hasDivider>
-          <HStack gap={2} justify="end">
-            <Button
-              label="Cancel"
-              variant="secondary"
-              onClick={() => handleOpenChange(false)}
-            />
-            <Button label="Deploy" variant="primary" onClick={submit} />
-          </HStack>
-        </LayoutFooter>
       </Layout>
     </Dialog>
   );
