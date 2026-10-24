@@ -3,6 +3,7 @@ import { Card } from "@astryxdesign/core/Card";
 import { Grid } from "@astryxdesign/core/Grid";
 import { HStack, VStack } from "@astryxdesign/core/Stack";
 import { Text } from "@astryxdesign/core/Text";
+import { useMediaQuery } from "@astryxdesign/core/hooks";
 
 export const DOCKER_CARD_RADIUS = "12px";
 
@@ -71,9 +72,10 @@ export function DockerCardIdentity({ children }: DockerCardProps) {
  * motion consistent across every card grid.
  */
 export function DockerCard({ children, className }: DockerCardProps) {
+  const isCompact = useMediaQuery("(max-width: 360px)");
   return (
     <Card
-      padding={5}
+      padding={isCompact ? 2 : 5}
       elevation="low"
       className={[
         "docker-resource-card min-w-0 flex flex-col gap-3 transition-transform duration-200 hover:-translate-y-0.5",

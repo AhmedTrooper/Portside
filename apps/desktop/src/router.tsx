@@ -23,10 +23,10 @@ function AppLayout() {
         sideNav={<Sidebar />}
         mobileNav={{ breakpoint: "none", hasToggle: false }}
       >
-        <div className="flex w-full h-full flex-col">
+        <div className="flex w-full h-full min-w-0 flex-col">
           <DraggableTitlebar />
 
-          <div className="flex-1 min-h-0 overflow-auto p-4">
+          <div className="flex-1 min-w-0 min-h-0 overflow-auto p-2 sm:p-4">
             <Outlet />
           </div>
         </div>

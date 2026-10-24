@@ -1,7 +1,6 @@
 import { useEffect, useState, type PointerEvent } from "react";
 import {
   GripVertical,
-  Menu,
   Maximize,
   Minimize,
   X,
@@ -18,7 +17,7 @@ import { useUIStore } from "../store/uiStore";
 const appWindow = getCurrentWindow();
 
 export default function DraggableTitlebar() {
-  const { toggleSidebar, isOpsPanelOpen, toggleOpsPanel } = useUIStore();
+  const { isOpsPanelOpen, toggleOpsPanel } = useUIStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const router = useRouter();
   // `location` updates on every navigation so we can re-render the
@@ -46,27 +45,18 @@ export default function DraggableTitlebar() {
   const canBack = router.history.canGoBack();
 
   return (
-    <div className="z-[99] shrink-0 pointer-events-auto flex flex-row items-center justify-between border-b border-default bg-surface/80 px-4 py-2 text-primary shadow-sm backdrop-blur-md">
-      <div className="flex items-center gap-4">
+    <div className="z-[99] min-w-0 shrink-0 pointer-events-auto flex flex-row items-center justify-between gap-2 border-b border-default bg-surface/80 px-2 sm:px-4 py-2 text-primary shadow-sm backdrop-blur-md">
+      <div className="flex items-center min-w-0 gap-1 sm:gap-4">
         <div
           onPointerDown={handleDragStart}
-          className="cursor-grab touch-none select-none text-secondary transition-colors hover:text-primary active:cursor-grabbing"
+          className="shrink-0 cursor-grab touch-none select-none text-secondary transition-colors hover:text-primary active:cursor-grabbing"
           title="Drag window"
         >
           <GripVertical size={20} />
         </div>
 
-        {/* Sidebar Toggle */}
-        <button
-          className="flex items-center justify-center p-1 hover:bg-surface-hover rounded-md cursor-pointer transition-colors z-10 outline-none focus:outline-none border-none bg-transparent"
-          onClick={toggleSidebar}
-          title="Toggle Sidebar"
-        >
-          <Menu size={18} />
-        </button>
-
         {/* History navigation. Buttons are disabled at the stack edges. */}
-        <div className="flex items-center gap-1">
+        <div className="hidden min-[360px]:flex items-center gap-1 shrink-0">
           <button
             type="button"
             aria-label="Go back"
@@ -95,13 +85,13 @@ export default function DraggableTitlebar() {
             fontWeight: 600,
             letterSpacing: "0.5px",
           }}
-          className="select-none pointer-events-none"
+          className="hidden min-[480px]:block select-none pointer-events-none"
         >
           Portside
         </Heading>
       </div>
 
-      <div className="flex items-center gap-3 z-10">
+      <div className="flex items-center gap-1 sm:gap-3 shrink-0 z-10">
         {/* Operations panel toggle. Pressing it flips the right rail that
             shows in-flight pull/remove progress on Images and Networks pages. */}
         <button
