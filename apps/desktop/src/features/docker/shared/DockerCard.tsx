@@ -3,12 +3,11 @@ import { Card } from "@astryxdesign/core/Card";
 
 export const DOCKER_CARD_RADIUS = "12px";
 
-/** Shared card chrome. The inset ring strengthens the edge without changing padding. */
+/** Shared card chrome with a single thin border. */
 export const DOCKER_CARD_STYLE = {
   borderRadius: DOCKER_CARD_RADIUS,
   "--_card-radius": DOCKER_CARD_RADIUS,
   borderColor: "var(--color-border-emphasized)",
-  "--_card-ring": "inset 0 0 0 1px var(--color-border-emphasized)",
 } as CSSProperties;
 
 interface DockerCardProps {

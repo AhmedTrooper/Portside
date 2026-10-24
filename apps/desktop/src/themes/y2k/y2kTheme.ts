@@ -51,7 +51,7 @@ export const y2kTheme = defineTheme({
     },
   },
 
-  radius: {base: 4, multiplier: 0},
+  radius: {base: 4, multiplier: 1},
 
   motion: {fast: 100, medium: 250, slow: 600, ratio: 0.8},
 
@@ -191,14 +191,14 @@ export const y2kTheme = defineTheme({
     '--color-text-gray': ['#4f453b', '#2d241b'],
 
     // =========================================================================
-    // Radius — sharp / brutalist (multiplier: 0 via radius config + explicit)
+    // Radius — consistent rounded controls and surfaces
     // =========================================================================
     '--radius-none': '0px',
-    '--radius-inner': '0px',
-    '--radius-element': '0px',
-    '--radius-container': '0px',
-    '--radius-page': '0px',
-    '--radius-full': '0px',
+    '--radius-inner': '4px',
+    '--radius-element': '8px',
+    '--radius-container': '12px',
+    '--radius-page': '12px',
+    '--radius-full': '9999px',
 
     // =========================================================================
     // Shadows — warm cream neutral
@@ -244,7 +244,7 @@ export const y2kTheme = defineTheme({
     },
     button: {
       base: {
-        borderRadius: '0px',
+        borderRadius: 'var(--radius-element)',
         borderWidth: '1px',
         borderStyle: 'solid',
         borderColor: 'var(--color-border)',
@@ -307,7 +307,7 @@ export const y2kTheme = defineTheme({
 
     banner: {
       base: {
-        borderRadius: '0px',
+        borderRadius: 'var(--radius-container)',
       },
       'status:info': {
         backgroundColor: 'var(--color-background-blue)',
@@ -337,13 +337,13 @@ export const y2kTheme = defineTheme({
 
     field: {
       base: {
-        borderRadius: '0px',
+        borderRadius: 'var(--radius-element)',
       },
     },
 
     card: {
       base: {
-        borderRadius: '0px',
+        borderRadius: 'var(--radius-container)',
         padding: 'var(--spacing-3)',
       },
     },
