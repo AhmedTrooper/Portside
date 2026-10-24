@@ -219,7 +219,7 @@ pub fn docker_remove_image(
     id: String,
     force: bool,
 ) -> Result<String, String> {
-    let op_id = format!("rm-{}-{}", &id, now_ms());
+    let op_id = format!("rm-{}-{}", id, now_ms());
 
     // Build owned `String` args so they live as long as the worker thread
     // (the closure is `'static + Send`). Using `&str` here would tie the

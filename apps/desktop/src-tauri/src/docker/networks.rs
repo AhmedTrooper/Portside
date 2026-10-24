@@ -114,13 +114,25 @@ pub fn docker_create_network(
     app: AppHandle,
     state: tauri::State<'_, NetworkOpsMap>,
     name: String,
+    driver: Option<String>,
 ) -> Result<String, String> {
     let trimmed = name.trim().to_string();
     if trimmed.is_empty() {
         return Err("Network name cannot be empty.".to_string());
     }
+    if trimmed.starts_with('-') {
+        return Err("Network name cannot start with a dash.".to_string());
+    }
     if trimmed.contains(' ') {
         return Err("Network name must not contain spaces.".to_string());
+    }
+
+    let driver = driver.unwrap_or_else(|| "bridge".to_string());
+    let driver = driver.trim().to_lowercase();
+    if !matches!(driver.as_str(), "bridge" | "overlay" | "macvlan" | "ipvlan") {
+        return Err(format!(
+            "Unsupported network driver: {driver}. Use bridge, overlay, macvlan, or ipvlan."
+        ));
     }
 
     let id = format!("create-{}-{}", trimmed, now_ms());
@@ -140,22 +152,23 @@ pub fn docker_create_network(
     let state_w = state.inner().clone();
     let id_w = id.clone();
     let name_w = trimmed;
+    let driver_w = driver.clone();
 
     thread::spawn(move || {
         // `docker network create` writes the new network's ID to stdout on
         // success. Stash it so the UI can show a useful finish message.
         let output = docker_command()
-            .args(["network", "create", &name_w])
+            .args(["network", "create", "--driver", &driver_w, &name_w])
             .output();
 
         match output {
             Ok(o) if o.status.success() => {
                 let stdout = String::from_utf8_lossy(&o.stdout).trim().to_string();
                 let msg = if stdout.is_empty() {
-                    None
+                    Some(format!("Created {driver_w} network {name_w}"))
                 } else {
                     Some(format!(
-                        "Created network {} ({})",
+                        "Created {driver_w} network {} ({})",
                         name_w,
                         short_id(&stdout)
                     ))
@@ -191,6 +204,9 @@ pub fn docker_remove_network(
     let trimmed = name.trim().to_string();
     if trimmed.is_empty() {
         return Err("Network name cannot be empty.".to_string());
+    }
+    if trimmed.starts_with('-') {
+        return Err("Network name cannot start with a dash.".to_string());
     }
 
     let id = format!("rm-{}-{}", trimmed, now_ms());

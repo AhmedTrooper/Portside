@@ -1,17 +1,22 @@
 //! Docker integration.
 //!
 //! Each submodule owns the read or write commands for one Docker resource:
-//!   - `containers` — list/start/stop/restart/remove
+//!   - `containers` — list/start/stop/restart/pause/remove
 //!   - `images`     — pull/remove with streaming progress
 //!   - `networks`   — list/create/remove
+//!   - `volumes`    — list/create/remove/prune
+//!   - `compose`    — list/up/stop/restart/down
 //!
-//! Shared helpers (e.g. `docker_command`, `now_ms`) live here so the
-//! submodules don't each redefine the same platform-specific binary probe.
+//! Shared helpers (e.g. `docker_command`, `run_docker`, `now_ms`) live here so
+//! the submodules don't each redefine the same platform-specific binary probe.
 
+pub mod compose;
 pub mod containers;
 pub mod images;
 pub mod networks;
+pub mod volumes;
 
+use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -64,6 +69,34 @@ pub(crate) fn docker_command() -> Command {
     // Last resort: let the OS resolve via PATH. The caller reports a friendly
     // error if the binary can't be found.
     Command::new(primary)
+}
+
+/// Run a Docker CLI command and return trimmed stdout on success. On failure we
+/// return stderr when Docker gave us one, otherwise a short status message.
+///
+/// This is the shared write-path helper for the simple one-shot commands
+/// (container lifecycle, volume and compose actions). Long-running operations
+/// such as image pulls keep their own streaming implementation.
+pub(crate) fn run_docker<I, S>(args: I) -> Result<String, String>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+{
+    let output = docker_command()
+        .args(args)
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        if stderr.is_empty() {
+            Err(format!("docker command failed: {}", output.status))
+        } else {
+            Err(stderr)
+        }
+    }
 }
 
 /// Current time in milliseconds since the UNIX epoch. Falls back to 0 if the

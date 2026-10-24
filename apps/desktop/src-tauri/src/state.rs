@@ -11,6 +11,8 @@ pub struct DockerStateData {
     pub containers: Vec<Value>,
     pub images: Vec<Value>,
     pub networks: Vec<Value>,
+    pub volumes: Vec<Value>,
+    pub compose_projects: Vec<Value>,
 }
 
 #[derive(Default, Clone, Serialize, PartialEq)]
@@ -85,7 +87,15 @@ pub fn init(app: &mut tauri::App) {
             .output()
         {
             if output.status.success() {
-                new_state.docker.images = parse_jsonl(&output.stdout);
+                let mut images = parse_jsonl(&output.stdout);
+                images.sort_by(|a, b| {
+                    let repo_a = a.get("Repository").and_then(|n| n.as_str()).unwrap_or("");
+                    let repo_b = b.get("Repository").and_then(|n| n.as_str()).unwrap_or("");
+                    let tag_a = a.get("Tag").and_then(|n| n.as_str()).unwrap_or("");
+                    let tag_b = b.get("Tag").and_then(|n| n.as_str()).unwrap_or("");
+                    repo_a.cmp(repo_b).then(tag_a.cmp(tag_b))
+                });
+                new_state.docker.images = images;
             }
         }
 
@@ -95,7 +105,48 @@ pub fn init(app: &mut tauri::App) {
             .output()
         {
             if output.status.success() {
-                new_state.docker.networks = parse_jsonl(&output.stdout);
+                let mut networks = parse_jsonl(&output.stdout);
+                networks.sort_by(|a, b| {
+                    let name_a = a.get("Name").and_then(|n| n.as_str()).unwrap_or("");
+                    let name_b = b.get("Name").and_then(|n| n.as_str()).unwrap_or("");
+                    name_a.cmp(name_b)
+                });
+                new_state.docker.networks = networks;
+            }
+        }
+
+        // 4. Fetch Docker Volumes.
+        if let Ok(output) = docker::docker_command()
+            .args(["volume", "ls", "--format", "{{json .}}"])
+            .output()
+        {
+            if output.status.success() {
+                let mut volumes = parse_jsonl(&output.stdout);
+                volumes.sort_by(|a, b| {
+                    let name_a = a.get("Name").and_then(|n| n.as_str()).unwrap_or("");
+                    let name_b = b.get("Name").and_then(|n| n.as_str()).unwrap_or("");
+                    name_a.cmp(name_b)
+                });
+                new_state.docker.volumes = volumes;
+            }
+        }
+
+        // 5. Fetch Docker Compose projects. Unlike the resource lists above,
+        // `docker compose ls --format json` emits a single JSON array rather
+        // than one object per line.
+        if let Ok(output) = docker::docker_command()
+            .args(["compose", "ls", "-a", "--format", "json"])
+            .output()
+        {
+            if output.status.success() {
+                let mut projects = serde_json::from_slice::<Vec<Value>>(&output.stdout)
+                    .unwrap_or_else(|_| parse_jsonl(&output.stdout));
+                projects.sort_by(|a, b| {
+                    let name_a = a.get("Name").and_then(|n| n.as_str()).unwrap_or("");
+                    let name_b = b.get("Name").and_then(|n| n.as_str()).unwrap_or("");
+                    name_a.cmp(name_b)
+                });
+                new_state.docker.compose_projects = projects;
             }
         }
 

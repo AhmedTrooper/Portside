@@ -20,6 +20,8 @@ pub fn run() {
             docker::containers::docker_start_container,
             docker::containers::docker_stop_container,
             docker::containers::docker_restart_container,
+            docker::containers::docker_pause_container,
+            docker::containers::docker_unpause_container,
             docker::containers::docker_remove_container,
             docker::images::docker_pull_image,
             docker::images::docker_remove_image,
@@ -27,6 +29,13 @@ pub fn run() {
             docker::networks::docker_create_network,
             docker::networks::docker_remove_network,
             docker::networks::get_network_operations,
+            docker::volumes::docker_create_volume,
+            docker::volumes::docker_remove_volume,
+            docker::volumes::docker_prune_volumes,
+            docker::compose::docker_compose_up,
+            docker::compose::docker_compose_stop,
+            docker::compose::docker_compose_restart,
+            docker::compose::docker_compose_down,
         ])
         .setup(|app| {
             app.manage(docker::images::new_ops_map());

@@ -8,21 +8,22 @@
 - [x] Move to Frameless UI (`decorations: false`) with custom Draggable Titlebar
 
 ## Docker Features
-- [x] Connect `docker ps -a` and `docker images` to GlobalState
-- [x] Docker Dashboard Page routing
-- [x] Live Containers Table with Auto-Refresh & Sorting
-- [ ] Container Lifecycle Actions (Start, Stop, Restart)
-- [ ] Images Management Table
-- [ ] Network Management
-- [ ] Volume Management
-- [ ] Docker Compose features
+- [x] Connect Docker CLI JSON output to GlobalState
+- [x] Docker dashboard with live resource counts and routing
+- [x] Live container card grid with auto-refresh and search
+- [x] Container lifecycle actions (start, stop, restart, pause, unpause, remove)
+- [x] Image card grid (pull, remove, force remove, streaming progress)
+- [x] Network card grid (create with driver selection, remove)
+- [x] Volume card grid (create, remove, prune)
+- [x] Docker Compose projects (list, deploy, up, stop, restart, down)
 
 ## UI/UX Enhancements
 - [x] Create Custom Draggable Titlebar with Window Controls (Minimize, Maximize, Close)
 - [x] Integrate Framer Motion for draggable widgets
 - [x] Sidebar navigation with Collapsible state
 - [x] Migrate to strict component-based layouts (Astryx rules)
-- [ ] Add loading skeletons for data fetching
+- [x] Responsive card-grid layouts for every Docker resource
+- [x] Add loading skeletons for data fetching
 
 ## Future Integrations
 - [ ] AWS Tooling
