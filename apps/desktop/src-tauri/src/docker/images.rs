@@ -2,7 +2,7 @@
 //!
 //! Owns the shared `ImageOpsMap` (an `Arc<RwLock<HashMap<...>>>`) which is the
 //! single source of truth for every image operation the app starts. Each
-//! `docker pull` / `docker rmi` runs on a background thread; progress is
+//! CLI pull/remove/push/build/save/load/prune runs on background threads; progress is
 //! pushed into the map and broadcast to the frontend as `image-operation-update`
 //! Tauri events so the UI can render a live status panel.
 //!
@@ -11,11 +11,14 @@
 //! a "Done"/"Error" pill. The frontend is responsible for garbage-collecting
 //! old entries from its own mirror state.
 
-use super::{docker_command, now_ms};
-use serde::Serialize;
+use super::{docker_command, now_ms, run_docker};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader, Read};
-use std::process::{ExitStatus, Stdio};
+use std::io::{BufRead, BufReader};
+use std::path::Path;
+use std::process::Stdio;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 use std::thread;
 use tauri::{command, AppHandle, Emitter};
@@ -24,12 +27,17 @@ use tauri::{command, AppHandle, Emitter};
 // Public types
 // =============================================================================
 
-/// Distinguishes a pull from a remove. Serializes as lowercase strings.
+/// Image CLI workflow. Serializes as lowercase strings.
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ImageOpKind {
     Pull,
     Remove,
+    Push,
+    Build,
+    Save,
+    Load,
+    Prune,
 }
 
 /// Lifecycle of an image operation. Drives the frontend status pill.
@@ -62,6 +70,7 @@ pub struct ImageOperation {
     pub finished_at_ms: Option<u64>,
     pub message: Option<String>,
     pub layers: HashMap<String, LayerProgress>,
+    pub log: String,
 }
 
 /// Shared state of every image operation in this app session.
@@ -126,84 +135,14 @@ pub fn docker_pull_image(
     state: tauri::State<'_, ImageOpsMap>,
     repository: String,
 ) -> Result<String, String> {
-    let id = format!("pull-{}-{}", repository, now_ms());
-    let op = ImageOperation {
-        id: id.clone(),
-        kind: ImageOpKind::Pull,
-        target: repository.clone(),
-        status: ImageOpStatus::Running,
-        started_at_ms: now_ms(),
-        finished_at_ms: None,
-        message: None,
-        layers: HashMap::new(),
-    };
-    state.write().unwrap().insert(id.clone(), op.clone());
-    emit_update(&app, &op);
-
-    let app_w = app.clone();
-    let state_w = state.inner().clone();
-    let id_w = id.clone();
-    let repo_w = repository.clone();
-
-    thread::spawn(move || {
-        let mut child = match docker_command()
-            .args(["pull", &repo_w])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-        {
-            Ok(c) => c,
-            Err(e) => {
-                finish_op(&app_w, &state_w, &id_w, false, Some(e.to_string()));
-                return;
-            }
-        };
-
-        // Drain stderr in its own thread so progress lines update the shared
-        // map while the parent waits for the child to exit.
-        let stderr = child.stderr.take();
-        let app_p = app_w.clone();
-        let state_p = state_w.clone();
-        let id_p = id_w.clone();
-        let _ = thread::spawn(move || {
-            if let Some(err_pipe) = stderr {
-                let reader = BufReader::new(err_pipe);
-                for line in reader.lines().map_while(Result::ok) {
-                    parse_pull_line(&app_p, &state_p, &id_p, &line);
-                }
-            }
-        });
-
-        let status: ExitStatus = child.wait().unwrap_or_default();
-
-        // Capture stdout for the final message (often "Status: ..." lines).
-        let mut final_msg: Option<String> = None;
-        if let Some(mut out) = child.stdout.take() {
-            let mut s = String::new();
-            if out.read_to_string(&mut s).is_ok() {
-                for line in s.lines() {
-                    let trimmed = line.trim();
-                    if trimmed.starts_with("Status:") || trimmed.starts_with("Digest:") {
-                        final_msg = Some(trimmed.to_string());
-                        break;
-                    }
-                }
-            }
-        }
-
-        let msg = if status.success() {
-            final_msg
-        } else {
-            Some("docker pull failed".to_string())
-        };
-        finish_op(&app_w, &state_w, &id_w, status.success(), msg);
-
-        // Tell the UI a pull finished so it can refresh on demand
-        // (otherwise the user waits up to 60s for the next poll tick).
-        let _ = app_w.emit("docker-images-changed", ());
-    });
-
-    Ok(id)
+    let repository = validate_reference(&repository)?;
+    start_operation(
+        app,
+        state.inner().clone(),
+        ImageOpKind::Pull,
+        repository.clone(),
+        vec!["pull".into(), repository],
+    )
 }
 
 // =============================================================================
@@ -219,62 +158,457 @@ pub fn docker_remove_image(
     id: String,
     force: bool,
 ) -> Result<String, String> {
-    let op_id = format!("rm-{}-{}", id, now_ms());
-
-    // Build owned `String` args so they live as long as the worker thread
-    // (the closure is `'static + Send`). Using `&str` here would tie the
-    // worker's lifetime to the outer function frame and cause borrow errors.
-    let mut args: Vec<String> = Vec::with_capacity(if force { 3 } else { 2 });
-    args.push("rmi".to_string());
+    let id = validate_reference(&id)?;
+    let mut args = vec!["image".into(), "rm".into()];
     if force {
         args.push("-f".to_string());
     }
     args.push(id.clone());
 
+    start_operation(app, state.inner().clone(), ImageOpKind::Remove, id, args)
+}
+
+fn validate_reference(value: &str) -> Result<String, String> {
+    let value = value.trim();
+    if value.is_empty()
+        || value.starts_with('-')
+        || value.chars().any(|c| c.is_whitespace() || c == '\0')
+    {
+        return Err("Provide a non-empty image reference without spaces or leading flags.".into());
+    }
+    Ok(value.into())
+}
+
+fn validate_path(value: &str, must_exist: bool, directory: bool) -> Result<String, String> {
+    let path = Path::new(value.trim());
+    if !path.is_absolute() || value.contains('\0') {
+        return Err("Choose an absolute file or folder path.".into());
+    }
+    if must_exist
+        && (if directory {
+            !path.is_dir()
+        } else {
+            !path.is_file()
+        })
+    {
+        return Err("The selected file or folder does not exist.".into());
+    }
+    if !must_exist
+        && (!path.parent().is_some_and(Path::is_dir) || path.file_name().is_none() || path.is_dir())
+    {
+        return Err("Choose a filename in an existing folder.".into());
+    }
+    Ok(path.to_string_lossy().into_owned())
+}
+
+static NEXT_OPERATION: AtomicU64 = AtomicU64::new(1);
+const MAX_LOG_BYTES: usize = 64 * 1024;
+
+fn append_log(log: &mut String, line: &str) {
+    log.push_str(line);
+    log.push('\n');
+    if log.len() > MAX_LOG_BYTES {
+        let mut offset = log.len() - MAX_LOG_BYTES;
+        while !log.is_char_boundary(offset) {
+            offset += 1;
+        }
+        log.drain(..offset);
+    }
+}
+
+fn consume_output<R: std::io::Read>(
+    reader: R,
+    app: &AppHandle,
+    state: &ImageOpsMap,
+    id: &str,
+) -> Result<(), String> {
+    let mut reader = BufReader::new(reader);
+    let mut bytes = Vec::new();
+    loop {
+        bytes.clear();
+        if reader
+            .read_until(b'\n', &mut bytes)
+            .map_err(|e| e.to_string())?
+            == 0
+        {
+            break;
+        }
+        // Docker/build output need not be UTF-8; never stop draining a pipe over it.
+        let line = String::from_utf8_lossy(&bytes).trim_end().to_string();
+        parse_pull_line(app, state, id, &line);
+        if let Ok(mut map) = state.write() {
+            if let Some(op) = map.get_mut(id) {
+                append_log(&mut op.log, &line);
+                op.message = Some(line);
+                emit_update(app, op);
+            }
+        }
+    }
+    Ok(())
+}
+
+fn start_operation(
+    app: AppHandle,
+    state: ImageOpsMap,
+    kind: ImageOpKind,
+    target: String,
+    args: Vec<String>,
+) -> Result<String, String> {
+    let id = format!(
+        "image-{}-{}",
+        now_ms(),
+        NEXT_OPERATION.fetch_add(1, Ordering::Relaxed)
+    );
     let op = ImageOperation {
-        id: op_id.clone(),
-        kind: ImageOpKind::Remove,
-        target: id.clone(),
+        id: id.clone(),
+        kind,
+        target,
         status: ImageOpStatus::Running,
         started_at_ms: now_ms(),
         finished_at_ms: None,
         message: None,
         layers: HashMap::new(),
+        log: String::new(),
     };
-    state.write().unwrap().insert(op_id.clone(), op.clone());
-    emit_update(&app, &op);
-
-    let app_w = app.clone();
-    let state_w = state.inner().clone();
-    let op_id_w = op_id.clone();
-
-    thread::spawn(move || {
-        // Defer to a String -> &str conversion at the very last moment so
-        // `Command::args` sees a temporary slice without holding borrows on
-        // the underlying storage for the duration of `output()`.
-        let arg_refs: Vec<&str> = args.iter().map(String::as_str).collect();
-        let output = docker_command().args(&arg_refs).output();
-        match output {
-            Ok(o) if o.status.success() => {
-                let msg = String::from_utf8_lossy(&o.stdout).trim().to_string();
-                let final_msg = if msg.is_empty() { None } else { Some(msg) };
-                finish_op(&app_w, &state_w, &op_id_w, true, final_msg);
-            }
-            Ok(o) => {
-                let msg = String::from_utf8_lossy(&o.stderr).trim().to_string();
-                finish_op(&app_w, &state_w, &op_id_w, false, Some(msg));
-            }
-            Err(e) => {
-                finish_op(&app_w, &state_w, &op_id_w, false, Some(e.to_string()));
+    {
+        let mut map = state
+            .write()
+            .map_err(|_| "Image operation state is unavailable.")?;
+        // Keep running work and a bounded recent history, even across page unmounts.
+        if map.len() >= 100 {
+            let oldest = map
+                .values()
+                .filter(|op| op.finished_at_ms.is_some())
+                .min_by_key(|op| op.started_at_ms)
+                .map(|op| op.id.clone());
+            if let Some(oldest) = oldest {
+                map.remove(&oldest);
             }
         }
-        // `id` moved into `args` above; the original `id` ownership is now
-        // owned by the local `args` Vec which drops at end of scope.
-        // Emit a generic change signal — the consumer doesn't need the id.
-        let _ = app_w.emit("docker-images-changed", ());
+        map.insert(id.clone(), op.clone());
+    }
+    emit_update(&app, &op);
+    let worker_id = id.clone();
+    thread::spawn(move || {
+        let result = (|| -> Result<bool, String> {
+            let mut child = docker_command()
+                .args(args)
+                .stdin(Stdio::null())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .map_err(|e| e.to_string())?;
+            let stderr = child
+                .stderr
+                .take()
+                .ok_or("Docker stderr was unavailable.")?;
+            let stdout = child
+                .stdout
+                .take()
+                .ok_or("Docker stdout was unavailable.")?;
+            let app_err = app.clone();
+            let state_err = state.clone();
+            let id_err = worker_id.clone();
+            let errors =
+                thread::spawn(move || consume_output(stderr, &app_err, &state_err, &id_err));
+            let out_result = consume_output(stdout, &app, &state, &worker_id);
+            let err_result = errors.join().map_err(|_| "Docker output reader failed.")?;
+            let status = child.wait().map_err(|e| e.to_string())?;
+            out_result?;
+            err_result?;
+            Ok(status.success())
+        })();
+        let message = match &result {
+            Err(error) => Some(error.clone()),
+            Ok(success) => state
+                .read()
+                .ok()
+                .and_then(|map| map.get(&worker_id).and_then(|op| op.message.clone()))
+                .or_else(|| {
+                    Some(
+                        if *success {
+                            "Completed."
+                        } else {
+                            "Docker command failed."
+                        }
+                        .into(),
+                    )
+                }),
+        };
+        finish_op(
+            &app,
+            &state,
+            &worker_id,
+            matches!(result, Ok(true)),
+            message,
+        );
+        // Failure may still have changed layers/tags, so always read fresh state.
+        let _ = app.emit("docker-images-changed", ());
     });
+    Ok(id)
+}
 
-    Ok(op_id)
+#[command]
+pub async fn docker_inspect_image(id: String) -> Result<Value, String> {
+    let id = validate_reference(&id)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let raw = run_docker(["image", "inspect", &id])?;
+        let mut data: Vec<Value> = serde_json::from_str(&raw).map_err(|e| e.to_string())?;
+        data.pop().ok_or("Docker returned no image details.".into())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[command]
+pub async fn docker_image_history(id: String) -> Result<Vec<Value>, String> {
+    let id = validate_reference(&id)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let raw = run_docker([
+            "image",
+            "history",
+            "--no-trunc",
+            "--format",
+            "{{json .}}",
+            &id,
+        ])?;
+        raw.lines()
+            .filter(|line| !line.trim().is_empty())
+            .map(|line| serde_json::from_str(line).map_err(|e| e.to_string()))
+            .collect()
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[command]
+pub async fn docker_search_images(query: String) -> Result<Vec<Value>, String> {
+    let query = query.trim().to_string();
+    if query.is_empty() || query.starts_with('-') || query.contains('\0') {
+        return Err("Enter a Docker Hub search term.".into());
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        let raw = run_docker(["search", "--limit", "25", "--format", "{{json .}}", &query])?;
+        raw.lines()
+            .filter(|line| !line.trim().is_empty())
+            .map(|line| serde_json::from_str(line).map_err(|e| e.to_string()))
+            .collect()
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[command]
+pub async fn docker_tag_image(app: AppHandle, id: String, reference: String) -> Result<(), String> {
+    let id = validate_reference(&id)?;
+    let reference = validate_reference(&reference)?;
+    let result =
+        tauri::async_runtime::spawn_blocking(move || run_docker(["image", "tag", &id, &reference]))
+            .await
+            .map_err(|e| e.to_string())?;
+    let _ = app.emit("docker-images-changed", ());
+    result.map(|_| ())
+}
+
+#[command]
+pub fn docker_push_image(
+    app: AppHandle,
+    state: tauri::State<'_, ImageOpsMap>,
+    reference: String,
+) -> Result<String, String> {
+    let reference = validate_reference(&reference)?;
+    start_operation(
+        app,
+        state.inner().clone(),
+        ImageOpKind::Push,
+        reference.clone(),
+        vec!["push".into(), reference],
+    )
+}
+
+#[command]
+pub fn docker_save_image(
+    app: AppHandle,
+    state: tauri::State<'_, ImageOpsMap>,
+    id: String,
+    path: String,
+) -> Result<String, String> {
+    let id = validate_reference(&id)?;
+    let path = validate_path(&path, false, false)?;
+    start_operation(
+        app,
+        state.inner().clone(),
+        ImageOpKind::Save,
+        path.clone(),
+        vec!["image".into(), "save".into(), "--output".into(), path, id],
+    )
+}
+
+#[command]
+pub fn docker_load_images(
+    app: AppHandle,
+    state: tauri::State<'_, ImageOpsMap>,
+    path: String,
+) -> Result<String, String> {
+    let path = validate_path(&path, true, false)?;
+    start_operation(
+        app,
+        state.inner().clone(),
+        ImageOpKind::Load,
+        path.clone(),
+        vec!["image".into(), "load".into(), "--input".into(), path],
+    )
+}
+
+#[command]
+pub fn docker_prune_images(
+    app: AppHandle,
+    state: tauri::State<'_, ImageOpsMap>,
+    all: bool,
+) -> Result<String, String> {
+    let mut args = vec!["image".into(), "prune".into(), "--force".into()];
+    if all {
+        args.push("--all".into());
+    }
+    start_operation(
+        app,
+        state.inner().clone(),
+        ImageOpKind::Prune,
+        if all {
+            "All unused images"
+        } else {
+            "Dangling images"
+        }
+        .into(),
+        args,
+    )
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImageBuildOptions {
+    pub context: String,
+    pub dockerfile: Option<String>,
+    pub tags: Vec<String>,
+    pub build_args: Vec<String>,
+    pub target: Option<String>,
+    pub no_cache: bool,
+    pub pull: bool,
+}
+
+#[command]
+pub fn docker_build_image(
+    app: AppHandle,
+    state: tauri::State<'_, ImageOpsMap>,
+    options: ImageBuildOptions,
+) -> Result<String, String> {
+    let context = validate_path(&options.context, true, true)?;
+    if options.tags.is_empty() {
+        return Err("Give the built image at least one tag.".into());
+    }
+    let mut args = vec!["build".into(), "--progress=plain".into()];
+    for tag in &options.tags {
+        args.extend(["--tag".into(), validate_reference(tag)?]);
+    }
+    if let Some(file) = &options.dockerfile {
+        if !file.trim().is_empty() {
+            args.extend(["--file".into(), validate_path(file, true, false)?]);
+        }
+    }
+    for arg in &options.build_args {
+        validate_assignment(arg)?;
+        args.push(format!("--build-arg={arg}"));
+    }
+    if let Some(target) = &options.target {
+        if !target.trim().is_empty() {
+            args.extend(["--target".into(), validate_reference(target)?]);
+        }
+    }
+    if options.no_cache {
+        args.push("--no-cache".into());
+    }
+    if options.pull {
+        args.push("--pull".into());
+    }
+    args.push(context);
+    start_operation(
+        app,
+        state.inner().clone(),
+        ImageOpKind::Build,
+        options.tags.join(", "),
+        args,
+    )
+}
+
+fn validate_assignment(value: &str) -> Result<(), String> {
+    let key = value.split_once('=').map(|(key, _)| key).unwrap_or("");
+    if key.is_empty()
+        || !key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+        || value.contains('\0')
+    {
+        return Err("Use KEY=value for environment variables and build arguments.".into());
+    }
+    Ok(())
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImageRunOptions {
+    pub image: String,
+    pub name: Option<String>,
+    pub ports: Vec<String>,
+    pub environment: Vec<String>,
+    pub volumes: Vec<String>,
+    pub network: Option<String>,
+    pub command: Vec<String>,
+    pub auto_remove: bool,
+}
+
+fn run_args(options: ImageRunOptions) -> Result<Vec<String>, String> {
+    let image = validate_reference(&options.image)?;
+    let mut args = vec!["run".into(), "--detach".into(), "--pull=never".into()];
+    if let Some(name) = options.name {
+        if !name.trim().is_empty() {
+            args.extend(["--name".into(), validate_reference(&name)?]);
+        }
+    }
+    if let Some(network) = options.network {
+        if !network.trim().is_empty() {
+            args.extend(["--network".into(), validate_reference(&network)?]);
+        }
+    }
+    for port in options.ports {
+        args.push(format!("--publish={}", validate_reference(&port)?));
+    }
+    for variable in options.environment {
+        validate_assignment(&variable)?;
+        args.push(format!("--env={variable}"));
+    }
+    for volume in options.volumes {
+        if volume.trim().is_empty() || volume.contains('\0') {
+            return Err("Volume mappings cannot be empty.".into());
+        }
+        args.push(format!("--volume={volume}"));
+    }
+    if options.command.iter().any(|arg| arg.contains('\0')) {
+        return Err("Command arguments cannot contain NUL characters.".into());
+    }
+    if options.auto_remove {
+        args.push("--rm".into());
+    }
+    args.push(image);
+    args.extend(options.command);
+    Ok(args)
+}
+
+#[command]
+pub async fn docker_run_image(app: AppHandle, options: ImageRunOptions) -> Result<String, String> {
+    let args = run_args(options)?;
+    let result = tauri::async_runtime::spawn_blocking(move || run_docker(args))
+        .await
+        .map_err(|e| e.to_string())?;
+    let _ = app.emit("docker-containers-changed", ());
+    result
 }
 
 // =============================================================================
@@ -389,4 +723,65 @@ fn parse_size_token(tok: &str) -> Option<u64> {
     };
 
     Some((n * multiplier) as u64)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn image_references_cannot_be_flags() {
+        for value in ["", "  ", "--all", "nginx latest", "nginx\0"] {
+            assert!(validate_reference(value).is_err());
+        }
+        assert_eq!(
+            validate_reference(" ghcr.io/team/app:latest ").unwrap(),
+            "ghcr.io/team/app:latest"
+        );
+    }
+
+    #[test]
+    fn assignments_preserve_values_without_shell_interpretation() {
+        assert!(validate_assignment("MESSAGE=hello; touch /tmp/nope").is_ok());
+        assert!(validate_assignment("=oops").is_err());
+        assert!(validate_assignment("--flag=value").is_err());
+    }
+
+    #[test]
+    fn run_command_arguments_follow_image_not_docker_options() {
+        let args = run_args(ImageRunOptions {
+            image: "alpine:latest".into(),
+            name: None,
+            ports: vec!["8080:80".into()],
+            environment: vec!["TEXT=hello world".into()],
+            volumes: vec![],
+            network: None,
+            command: vec!["sh".into(), "-c".into(), "echo hello".into()],
+            auto_remove: false,
+        })
+        .unwrap();
+        assert_eq!(
+            &args[args.len() - 4..],
+            ["alpine:latest", "sh", "-c", "echo hello"]
+        );
+        assert!(args.contains(&"--env=TEXT=hello world".into()));
+        assert!(args.contains(&"--publish=8080:80".into()));
+    }
+
+    #[test]
+    fn logs_are_bounded_on_utf8_boundaries() {
+        let mut log = String::new();
+        append_log(&mut log, &"é".repeat(MAX_LOG_BYTES));
+        assert!(log.len() <= MAX_LOG_BYTES);
+        assert!(log.is_char_boundary(0));
+    }
+
+    #[test]
+    fn download_progress_is_parsed() {
+        assert_eq!(
+            parse_bracket_progress("[==>] 1MB/2MB"),
+            Some((1_048_576, 2_097_152))
+        );
+        assert_eq!(parse_size_token("nonsense"), None);
+    }
 }

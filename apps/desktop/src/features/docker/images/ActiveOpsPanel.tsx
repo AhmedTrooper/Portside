@@ -1,8 +1,5 @@
-import { useEffect, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
-import { invoke } from "@tauri-apps/api/core";
 import { Card } from "@astryxdesign/core/Card";
-import { Heading } from "@astryxdesign/core/Text";
+import { Heading, Text } from "@astryxdesign/core/Text";
 import { DOCKER_CARD_STYLE } from "../shared/DockerCard";
 import { ProgressBar } from "@astryxdesign/core/ProgressBar";
 import { Stack } from "@astryxdesign/core/Stack";
@@ -14,29 +11,12 @@ import {
   XCircle,
   Loader2,
   Inbox,
+  Upload,
+  Hammer,
+  Archive,
 } from "lucide-react";
-
-type OpKind = "pull" | "remove";
-type OpStatus = "running" | "done" | "error" | "cancelled";
-
-interface LayerProgress {
-  id: string;
-  current: number;
-  total: number;
-}
-
-interface ImageOperation {
-  id: string;
-  kind: OpKind;
-  target: string;
-  status: OpStatus;
-  started_at_ms: number;
-  finished_at_ms: number | null;
-  message: string | null;
-  layers: Record<string, LayerProgress>;
-}
-
-const RECENT_KEEP_MS = 5_000; // hold finished ops for 5s so the UI can show "Done"
+import type { ImageOperation } from "./imageOperations";
+import { useImageOperations } from "./useImageOperations";
 
 function aggregateProgress(op: ImageOperation): { current: number; total: number } {
   let current = 0;
@@ -58,6 +38,9 @@ function statusIcon(op: ImageOperation) {
   if (op.status === "done") return CheckCircle2;
   if (op.status === "error") return XCircle;
   if (op.kind === "pull") return Download;
+  if (op.kind === "push") return Upload;
+  if (op.kind === "build") return Hammer;
+  if (op.kind === "save" || op.kind === "load") return Archive;
   return Trash2;
 }
 
@@ -65,8 +48,7 @@ function statusLabel(op: ImageOperation): string {
   if (op.status === "done") return "Done";
   if (op.status === "error") return "Error";
   if (op.status === "cancelled") return "Cancelled";
-  if (op.kind === "pull") return "Pulling";
-  return "Removing";
+  return { pull: "Pulling", remove: "Removing", push: "Pushing", build: "Building", save: "Saving", load: "Loading", prune: "Pruning" }[op.kind];
 }
 
 function formatBytes(bytes: number): string {
@@ -133,7 +115,7 @@ function OperationRow({ op }: OperationRowProps) {
         <div className="mt-2">
           <ProgressBar
             isIndeterminate
-            label="Remove progress"
+            label={`${op.kind} progress`}
             isLabelHidden
             variant="accent"
           />
@@ -144,6 +126,12 @@ function OperationRow({ op }: OperationRowProps) {
           {op.message}
         </div>
       )}
+      {op.log && (
+        <details className="mt-2 text-xs">
+          <summary className="cursor-pointer">Output</summary>
+          <pre className="select-text whitespace-pre-wrap break-all leading-relaxed max-h-[220px] overflow-auto">{op.log}</pre>
+        </details>
+      )}
     </div>
   );
 }
@@ -152,89 +140,22 @@ function OperationRow({ op }: OperationRowProps) {
  * Live panel of in-flight and recently-finished image operations.
  *
  * Subscribes to the `image-operation-update` event the backend emits whenever
- * a pull/remove's state changes. Finished operations are kept in the UI for
- * a few seconds so the user sees the "Done" or "Error" pill before the entry
- * rolls off.
+ * an image workflow's state changes. Recent results and bounded output stay
+ * available for five minutes, including across page unmounts.
  */
 export function ActiveOpsPanel() {
-  const [ops, setOps] = useState<Record<string, ImageOperation>>({});
-
-  useEffect(() => {
-    let unlisten: () => void = () => {};
-    let cancelled = false;
-
-    async function setup() {
-      // Seed the map with any in-flight ops from the backend's shared state.
-      // The command is optional (older builds won't have it), so any failure
-      // is treated as "nothing to seed" rather than an error.
-      try {
-        const raw: unknown = await invoke("get_image_operations");
-        if (cancelled) return;
-        if (Array.isArray(raw)) {
-          const opsList: ImageOperation[] = [];
-          for (const item of raw) {
-            if (isImageOperation(item)) {
-              opsList.push(item);
-            }
-          }
-          const next: Record<string, ImageOperation> = {};
-          for (const op of opsList) {
-            next[op.id] = op;
-          }
-          setOps(next);
-        }
-      } catch {
-        // Backend without the command yet — start empty.
-      }
-
-      unlisten = await listen<unknown>("image-operation-update", (event) => {
-        if (cancelled) return;
-        const op = event.payload;
-        if (!isImageOperation(op)) return;
-        setOps((prev) => ({ ...prev, [op.id]: op }));
-      });
-    }
-
-    setup();
-
-    return () => {
-      cancelled = true;
-      unlisten();
-    };
-  }, []);
-
-  // GC finished ops after a while so the panel doesn't grow indefinitely.
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      const now = Date.now();
-      setOps((prev) => {
-        const next: Record<string, ImageOperation> = {};
-        let changed = false;
-        for (const [id, op] of Object.entries(prev)) {
-          const finishedMs = op.finished_at_ms ?? 0;
-          if (op.status === "running" || now - finishedMs < RECENT_KEEP_MS) {
-            next[id] = op;
-          } else {
-            changed = true;
-          }
-        }
-        return changed ? next : prev;
-      });
-    }, 1_000);
-    return () => window.clearInterval(interval);
-  }, []);
-
-  const entries = Object.values(ops).sort((a, b) => b.started_at_ms - a.started_at_ms);
+  const { operations: entries, error } = useImageOperations();
 
   return (
     <Card padding={0} className="w-full h-full min-w-0 min-h-0 flex flex-col" style={DOCKER_CARD_STYLE}>
       <Stack direction="horizontal" gap={2} vAlign="center" wrap="wrap" className="shrink-0 px-4 py-3 border-b border-default">
         <Heading level={3}>Operations</Heading>
         <span className="text-xs opacity-70">
-          {entries.length === 0 ? "Idle" : `${entries.length} active`}
+          {entries.length === 0 ? "Idle" : `${entries.filter(op => op.status === "running").length} active`}
         </span>
       </Stack>
       <div className="flex-1 min-h-0 overflow-auto">
+        {error && <Text role="alert" display="block" className="docker-card-text">Could not read image operations: {error}</Text>}
         {entries.length === 0 ? (
           <div className="p-6 text-center text-sm opacity-70 inline-flex items-center gap-2 justify-center w-full">
             <Icon icon={Inbox} size="sm" />
@@ -246,26 +167,4 @@ export function ActiveOpsPanel() {
       </div>
     </Card>
   );
-}
-
-/**
- * Narrow an `unknown` value into an `ImageOperation`. Used at the trust
- * boundary between Tauri and React: an event payload could be missing,
- * malformed, or come from an older binary. Anything we can't prove safe
- * is dropped — never surfaced to the UI as garbage.
- */
-function isImageOperation(value: unknown): value is ImageOperation {
-  if (!value || typeof value !== "object") return false;
-  const v = value as Record<string, unknown>;
-  if (typeof v.id !== "string") return false;
-  if (v.kind !== "pull" && v.kind !== "remove") return false;
-  if (typeof v.target !== "string") return false;
-  if (v.status !== "running" && v.status !== "done" && v.status !== "error" && v.status !== "cancelled") {
-    return false;
-  }
-  if (typeof v.started_at_ms !== "number") return false;
-  if (v.finished_at_ms !== null && typeof v.finished_at_ms !== "number") return false;
-  if (v.message !== null && typeof v.message !== "string") return false;
-  if (!v.layers || typeof v.layers !== "object") return false;
-  return true;
 }

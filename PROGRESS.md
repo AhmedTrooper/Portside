@@ -12,7 +12,10 @@
 - [x] Docker dashboard with live resource counts and routing
 - [x] Live container card grid with auto-refresh and search
 - [x] Standalone container lifecycle actions (start, stop, restart, pause, unpause, remove)
-- [x] Image card grid (pull, remove, force remove, streaming progress)
+- [x] Image card grid (pull, inspect/history, tag/untag, run, save/load, remove, prune)
+- [x] Docker Hub image search and registry push using existing Docker credentials
+- [x] Dockerfile/context builds with tags, build arguments, cache and target options
+- [x] Shared image operation state, bounded streaming output, and final success/failure feedback
 - [x] Network card grid (create with driver selection, remove)
 - [x] Volume card grid (create, remove, prune)
 - [x] Docker Compose projects (list, deploy, up, stop, restart, down)
