@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useNavigate } from "@tanstack/react-router";
 import { Card } from "@astryxdesign/core/Card";
 import { Button } from "@astryxdesign/core/Button";
 import { DropdownMenu } from "@astryxdesign/core/DropdownMenu";
@@ -7,6 +8,7 @@ import { Heading, Text } from "@astryxdesign/core/Text";
 import { AlertDialog } from "@astryxdesign/core/AlertDialog";
 import { useToast } from "@astryxdesign/core/Toast";
 import {
+  Boxes,
   Container as ContainerIcon,
   MoreVertical,
   Pause,
@@ -23,6 +25,7 @@ import { StatusPill } from "../shared/StatusPill";
 import { useDockerSnapshot } from "../shared/useDockerSnapshot";
 import {
   containerComposeProject,
+  parseLabels,
   parsePorts,
   shortId,
   stringifyError,
@@ -35,6 +38,9 @@ interface PendingRemove {
   force: boolean;
 }
 
+type ContainerAction = "start" | "stop" | "restart" | "pause" | "unpause";
+type ProjectAction = "stop" | "restart";
+
 export function ContainerGrid() {
   const { containers, isLoading, error, refresh } = useDockerSnapshot();
   const [search, setSearch] = useState("");
@@ -42,6 +48,7 @@ export function ContainerGrid() {
   const [pendingRemove, setPendingRemove] = useState<PendingRemove | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
   const toast = useToast();
+  const navigate = useNavigate();
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -68,7 +75,17 @@ export function ContainerGrid() {
     [containers]
   );
 
-  const runAction = async (action: string, container: DockerContainer) => {
+  const runAction = async (action: ContainerAction, container: DockerContainer) => {
+    const project = containerComposeProject(container);
+    if (project) {
+      toast({
+        type: "error",
+        body: `${container.Names} belongs to Compose project ${project}. Use the project actions instead.`,
+        isAutoHide: false,
+      });
+      return;
+    }
+
     setBusyId(container.ID);
     try {
       if (action === "start") {
@@ -92,6 +109,30 @@ export function ContainerGrid() {
       toast({
         type: "error",
         body: `Failed to ${action} ${container.Names}: ${stringifyError(e)}`,
+        isAutoHide: false,
+      });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const runProjectAction = async (action: ProjectAction, container: DockerContainer) => {
+    const project = containerComposeProject(container);
+    if (!project) return;
+
+    setBusyId(container.ID);
+    try {
+      await invoke(`docker_compose_${action}`, { project, files: [] });
+      toast({
+        type: "info",
+        body: `${action === "stop" ? "Stopping" : "Restarting"} Compose project ${project}…`,
+        autoHideDuration: 3000,
+      });
+      await refresh();
+    } catch (e) {
+      toast({
+        type: "error",
+        body: `Failed to ${action} Compose project ${project}: ${stringifyError(e)}`,
         isAutoHide: false,
       });
     } finally {
@@ -161,6 +202,8 @@ export function ContainerGrid() {
             container={container}
             isBusy={busyId === container.ID}
             onAction={(action) => void runAction(action, container)}
+            onProjectAction={(action) => void runProjectAction(action, container)}
+            onOpenCompose={() => void navigate({ to: "/docker/compose" })}
             onRemove={(force) =>
               setPendingRemove({ id: container.ID, name: container.Names, force })
             }
@@ -194,63 +237,111 @@ export function ContainerGrid() {
 interface ContainerCardProps {
   container: DockerContainer;
   isBusy: boolean;
-  onAction: (action: string) => void;
+  onAction: (action: ContainerAction) => void;
+  onProjectAction: (action: ProjectAction) => void;
+  onOpenCompose: () => void;
   onRemove: (force: boolean) => void;
 }
 
-function ContainerCard({ container, isBusy, onAction, onRemove }: ContainerCardProps) {
+function ContainerCard({
+  container,
+  isBusy,
+  onAction,
+  onProjectAction,
+  onOpenCompose,
+  onRemove,
+}: ContainerCardProps) {
   const state = container.State.toLowerCase();
   const isRunning = state === "running";
   const isPaused = state === "paused";
   const ports = parsePorts(container.Ports);
   const composeProject = containerComposeProject(container);
-  const primaryAction = isPaused ? "unpause" : isRunning ? "stop" : "start";
-  const primaryLabel = isPaused ? "Resume" : isRunning ? "Stop" : "Start";
+  const isCompose = composeProject !== null;
+  const projectActive =
+    isRunning || isPaused || state === "restarting";
+  const labels = parseLabels(container.Labels);
+  const composeService = labels["com.docker.compose.service"] ?? null;
+  const primaryAction: ContainerAction = isPaused
+    ? "unpause"
+    : isRunning
+      ? "stop"
+      : "start";
 
-  const menuItems = [
-    {
-      label: "Start",
-      icon: <Play size={14} aria-hidden />,
-      isDisabled: isRunning || state === "restarting",
-      onClick: () => onAction("start"),
-    },
-    {
-      label: "Stop",
-      icon: <Square size={14} aria-hidden />,
-      isDisabled: !isRunning,
-      onClick: () => onAction("stop"),
-    },
-    {
-      label: "Restart",
-      icon: <RotateCw size={14} aria-hidden />,
-      isDisabled: !isRunning && !isPaused,
-      onClick: () => onAction("restart"),
-    },
-    {
-      label: "Pause",
-      icon: <Pause size={14} aria-hidden />,
-      isDisabled: !isRunning,
-      onClick: () => onAction("pause"),
-    },
-    {
-      label: "Unpause",
-      icon: <PlayCircle size={14} aria-hidden />,
-      isDisabled: !isPaused,
-      onClick: () => onAction("unpause"),
-    },
-    { type: "divider" as const },
-    {
-      label: "Remove",
-      icon: <Trash2 size={14} aria-hidden />,
-      isDisabled: isRunning,
-      onClick: () => onRemove(false),
-    },
-    {
-      label: "Force remove",
-      icon: <ShieldAlert size={14} aria-hidden />,
-      onClick: () => onRemove(true),
-    },
-  ];
+  const primaryLabel = isCompose
+    ? projectActive
+      ? "Stop project"
+      : "Open Compose"
+    : isPaused
+      ? "Resume"
+      : isRunning
+        ? "Stop"
+        : "Start";
+
+  const menuItems = isCompose
+    ? [
+        {
+          label: "Stop project",
+          icon: <Square size={14} aria-hidden />,
+          isDisabled: !projectActive,
+          onClick: () => onProjectAction("stop"),
+        },
+        {
+          label: "Restart project",
+          icon: <RotateCw size={14} aria-hidden />,
+          isDisabled: !projectActive,
+          onClick: () => onProjectAction("restart"),
+        },
+        { type: "divider" as const },
+        {
+          label: "Open Compose page",
+          icon: <Boxes size={14} aria-hidden />,
+          onClick: onOpenCompose,
+        },
+      ]
+    : [
+        {
+          label: "Start",
+          icon: <Play size={14} aria-hidden />,
+          isDisabled: isRunning || state === "restarting",
+          onClick: () => onAction("start"),
+        },
+        {
+          label: "Stop",
+          icon: <Square size={14} aria-hidden />,
+          isDisabled: !isRunning,
+          onClick: () => onAction("stop"),
+        },
+        {
+          label: "Restart",
+          icon: <RotateCw size={14} aria-hidden />,
+          isDisabled: !isRunning && !isPaused,
+          onClick: () => onAction("restart"),
+        },
+        {
+          label: "Pause",
+          icon: <Pause size={14} aria-hidden />,
+          isDisabled: !isRunning,
+          onClick: () => onAction("pause"),
+        },
+        {
+          label: "Unpause",
+          icon: <PlayCircle size={14} aria-hidden />,
+          isDisabled: !isPaused,
+          onClick: () => onAction("unpause"),
+        },
+        { type: "divider" as const },
+        {
+          label: "Remove",
+          icon: <Trash2 size={14} aria-hidden />,
+          isDisabled: isRunning,
+          onClick: () => onRemove(false),
+        },
+        {
+          label: "Force remove",
+          icon: <ShieldAlert size={14} aria-hidden />,
+          onClick: () => onRemove(true),
+        },
+      ];
 
   return (
     <Card padding={4} className="min-w-0 flex flex-col gap-3">
@@ -288,6 +379,15 @@ function ContainerCard({ container, isBusy, onAction, onRemove }: ContainerCardP
         </div>
       </div>
 
+      {isCompose ? (
+        <div className="flex items-center gap-1.5 text-[11px] opacity-70 min-w-0">
+          <Boxes size={12} aria-hidden className="shrink-0" />
+          <span className="truncate" title={`Compose project ${composeProject}`}>
+            Managed by Compose · {composeProject}
+          </span>
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
         <Meta label="Status" value={container.Status} />
         <Meta
@@ -295,9 +395,8 @@ function ContainerCard({ container, isBusy, onAction, onRemove }: ContainerCardP
           value={container.RunningFor ?? container.CreatedAt ?? "Unknown"}
         />
         <Meta
-          label="Project"
-          value={composeProject ?? "Standalone"}
-          icon={composeProject ? "compose" : undefined}
+          label={isCompose ? "Service" : "Project"}
+          value={composeService ?? composeProject ?? "Standalone"}
         />
         <Meta label="Networks" value={container.Networks || "None"} />
       </div>
@@ -331,10 +430,18 @@ function ContainerCard({ container, isBusy, onAction, onRemove }: ContainerCardP
       <div className="mt-auto flex items-center justify-between gap-2 pt-1">
         <Button
           label={primaryLabel}
-          variant={isRunning ? "secondary" : "primary"}
+          variant={
+            isCompose ? "secondary" : isRunning ? "secondary" : "primary"
+          }
           size="sm"
           icon={
-            isPaused ? (
+            isCompose ? (
+              projectActive ? (
+                <Square size={14} aria-hidden />
+              ) : (
+                <Boxes size={14} aria-hidden />
+              )
+            ) : isPaused ? (
               <PlayCircle size={14} aria-hidden />
             ) : isRunning ? (
               <Square size={14} aria-hidden />
@@ -343,7 +450,17 @@ function ContainerCard({ container, isBusy, onAction, onRemove }: ContainerCardP
             )
           }
           isLoading={isBusy}
-          onClick={() => onAction(primaryAction)}
+          onClick={() => {
+            if (isCompose) {
+              if (projectActive) {
+                onProjectAction("stop");
+              } else {
+                onOpenCompose();
+              }
+            } else {
+              onAction(primaryAction);
+            }
+          }}
         />
         <span className="text-[11px] opacity-50 font-mono" title={container.ID}>
           {shortId(container.ID)}
@@ -353,19 +470,18 @@ function ContainerCard({ container, isBusy, onAction, onRemove }: ContainerCardP
   );
 }
 
-function Meta({ label, value, icon }: { label: string; value: string; icon?: "compose" }) {
+function Meta({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
       <span className="text-[10px] uppercase tracking-wide opacity-60">{label}</span>
       <div className="truncate" title={value}>
-        {icon === "compose" ? <span className="opacity-60">compose · </span> : null}
         {value}
       </div>
     </div>
   );
 }
 
-function labelForAction(action: string): string {
+function labelForAction(action: ContainerAction): string {
   switch (action) {
     case "start":
       return "Starting";

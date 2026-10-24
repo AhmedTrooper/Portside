@@ -13,6 +13,7 @@
 //! frontend.
 
 use serde::Serialize;
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::thread;
@@ -189,6 +190,31 @@ pub fn docker_create_network(
     Ok(id)
 }
 
+/// Read the Compose project label from a network before allowing a direct
+/// removal. Compose creates and owns its project network; removing it beneath
+/// a live project breaks the next `up`/`down` operation.
+fn compose_project_for_network(name: &str) -> Result<Option<String>, String> {
+    let output = docker_command()
+        .args(["network", "inspect", "--format", "{{json .Labels}}", name])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(if stderr.is_empty() {
+            "Could not inspect the network.".to_string()
+        } else {
+            stderr
+        });
+    }
+
+    let labels: Value = serde_json::from_slice(&output.stdout).unwrap_or(Value::Null);
+    Ok(labels
+        .get("com.docker.compose.project")
+        .and_then(Value::as_str)
+        .map(str::to_string))
+}
+
 // =============================================================================
 // docker_remove_network
 // -----------------------------------------------------------------------------
@@ -207,6 +233,11 @@ pub fn docker_remove_network(
     }
     if trimmed.starts_with('-') {
         return Err("Network name cannot start with a dash.".to_string());
+    }
+    if let Some(project) = compose_project_for_network(&trimmed)? {
+        return Err(format!(
+            "Network is managed by Compose project \"{project}\". Take the project down from the Compose page instead."
+        ));
     }
 
     let id = format!("rm-{}-{}", trimmed, now_ms());

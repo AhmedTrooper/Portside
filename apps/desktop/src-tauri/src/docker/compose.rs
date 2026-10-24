@@ -61,7 +61,17 @@ fn run_compose(
     action: &[&str],
 ) -> Result<String, String> {
     let project = validate_project(project)?;
-    let files = validate_files(files)?;
+    // Compose can resolve `stop`, `restart`, and `down` from the project
+    // labels alone, so those actions don't need a compose file path. This lets
+    // Compose-owned containers be controlled from the Containers page and lets
+    // a project be removed even when its original directory has moved. `up`
+    // still requires the file.
+    let needs_files = action.contains(&"up");
+    let files = if needs_files {
+        validate_files(files)?
+    } else {
+        Vec::new()
+    };
 
     let mut args = vec!["compose".to_string()];
     if let Some(project) = project {

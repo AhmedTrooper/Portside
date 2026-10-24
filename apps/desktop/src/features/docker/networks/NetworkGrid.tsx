@@ -196,6 +196,8 @@ interface NetworkCardProps {
 function NetworkCard({ network, onRemove }: NetworkCardProps) {
   const system = isSystemNetwork(network);
   const labels = parseLabels(network.Labels);
+  const composeProject = labels["com.docker.compose.project"] ?? null;
+  const isCompose = composeProject !== null;
   const labelEntries = Object.entries(labels).slice(0, 2);
   const internal = network.Internal === "true";
 
@@ -224,9 +226,13 @@ function NetworkCard({ network, onRemove }: NetworkCardProps) {
           hasChevron={false}
           items={[
             {
-              label: system ? "System network" : "Remove",
+              label: system
+                ? "System network"
+                : isCompose
+                  ? "Managed by Compose"
+                  : "Remove",
               icon: <Trash2 size={14} aria-hidden />,
-              isDisabled: system,
+              isDisabled: system || isCompose,
               onClick: onRemove,
             },
           ]}
@@ -234,11 +240,23 @@ function NetworkCard({ network, onRemove }: NetworkCardProps) {
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
-        {system ? <Tag label="system" /> : <Tag label="user-defined" />}
+        {system ? (
+          <Tag label="system" />
+        ) : isCompose ? (
+          <Tag label={`compose · ${composeProject}`} />
+        ) : (
+          <Tag label="user-defined" />
+        )}
         {internal ? <Tag label="internal" icon={<Lock size={10} aria-hidden />} /> : null}
         {network.IPv4 === "true" ? <Tag label="IPv4" /> : null}
         {network.IPv6 === "true" ? <Tag label="IPv6" /> : null}
       </div>
+
+      {isCompose ? (
+        <div className="text-[11px] opacity-70">
+          Take the Compose project down to remove this network.
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
         <Meta label="Driver" value={network.Driver} />

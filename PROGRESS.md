@@ -11,11 +11,12 @@
 - [x] Connect Docker CLI JSON output to GlobalState
 - [x] Docker dashboard with live resource counts and routing
 - [x] Live container card grid with auto-refresh and search
-- [x] Container lifecycle actions (start, stop, restart, pause, unpause, remove)
+- [x] Standalone container lifecycle actions (start, stop, restart, pause, unpause, remove)
 - [x] Image card grid (pull, remove, force remove, streaming progress)
 - [x] Network card grid (create with driver selection, remove)
 - [x] Volume card grid (create, remove, prune)
 - [x] Docker Compose projects (list, deploy, up, stop, restart, down)
+- [x] Compose-managed containers and networks are protected from individual actions
 
 ## UI/UX Enhancements
 - [x] Create Custom Draggable Titlebar with Window Controls (Minimize, Maximize, Close)
