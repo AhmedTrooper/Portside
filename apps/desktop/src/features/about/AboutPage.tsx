@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { Heading, Text, VStack, Card, Button, TextArea, HStack, Badge } from "@astryxdesign/core";
 import { useAppTheme } from "../../context/ThemeContext";
+import { Link } from "@tanstack/react-router";
+import { ArrowUpRight } from "lucide-react";
+import { author, version } from "../../../package.json";
+import { DockerCardGrid } from "../docker/shared/DockerCard";
 
 export function AboutPage() {
-  const { mode, toggleMode, customThemeJson, setCustomThemeJson, clearCustomTheme } = useAppTheme();
+  const { mode, toggleMode, customThemeJson, setCustomThemeJson, clearCustomTheme, activeTheme } = useAppTheme();
   const [jsonInput, setJsonInput] = useState(customThemeJson);
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -23,28 +27,41 @@ export function AboutPage() {
   };
 
   return (
-    <VStack className="gap-4 p-6">
+    <VStack gap={4} className="p-3 sm:p-6 w-full min-w-0">
       <Heading level={1}>About Portside</Heading>
-      <Text type="body" color="secondary">
-        Portside is a streamlined platform for managing cloud infrastructure, deployments, and observability.
+      <Text type="body" color="secondary" display="block" className="docker-card-text">
+        Portside is a desktop app by {author} for managing Docker images, containers, networks, volumes, and Compose projects using the Docker CLI.
       </Text>
+      <Link to="/docker" className="inline-flex items-center gap-2 font-semibold hover:underline">Go to Docker management <ArrowUpRight size={16} aria-hidden /></Link>
 
-      <Card className="p-4 mt-4">
-        <VStack className="gap-3">
+      <DockerCardGrid>
+      <Card padding={4} elevation="low" className="min-w-0">
+        <VStack gap={2}>
+          <Heading level={3}>Portside</Heading>
+          <Text type="supporting" display="block">Author: {author}</Text>
+          <Text type="supporting" display="block">Version: {version}</Text>
+          <Text type="supporting" display="block">Build: {import.meta.env.MODE}</Text>
+          <Text type="supporting" display="block" className="docker-card-text">Built with Tauri, React, TypeScript, and Astryx. Docker data is read locally and refreshed after actions.</Text>
+        </VStack>
+      </Card>
+      <Card padding={4} elevation="low" className="min-w-0">
+        <VStack gap={2}>
           <Heading level={3}>Theme Settings</Heading>
-          <HStack className="gap-3 items-center">
+          <Text type="supporting" display="block">Theme: {activeTheme.name}</Text>
+          <HStack gap={1} wrap="wrap" align="center">
             <Text type="supporting">Active Mode:</Text>
             <Badge variant="info" label={mode.toUpperCase()} />
-            <Button variant="secondary" size="sm" onClick={toggleMode} label={`Toggle to ${mode === "dark" ? "Light" : "Dark"} Mode`} />
+            <Button variant="secondary" size="sm" onClick={toggleMode} label={`Use ${mode === "dark" ? "Light" : "Dark"} Mode`} />
           </HStack>
         </VStack>
       </Card>
+      </DockerCardGrid>
 
-      <Card className="p-4 mt-2">
-        <VStack className="gap-3">
-          <Heading level={3}>Custom Theme JSON (localStorage)</Heading>
-          <Text type="supporting" color="secondary">
-            Paste a custom Astryx theme JSON object below to override token variables and component styles.
+      <Card padding={4} elevation="low" className="w-full min-w-0">
+        <VStack gap={2}>
+          <Heading level={3}>Custom Astryx Theme</Heading>
+          <Text type="supporting" color="secondary" display="block" className="docker-card-text">
+            Override theme tokens and component styles with JSON. Your saved theme stays on this device.
           </Text>
           <TextArea
             label="JSON Input"
@@ -55,22 +72,15 @@ export function AboutPage() {
             className="font-mono text-xs w-full"
           />
           {statusMessage && (
-            <Badge variant={statusMessage.type === "success" ? "success" : "error"} label={statusMessage.text} />
+            <Text display="block" role={statusMessage.type === "error" ? "alert" : "status"} className="docker-card-text">{statusMessage.text}</Text>
           )}
-          <HStack className="gap-2">
-            <Button variant="primary" size="sm" onClick={handleApply} label="Save & Apply Custom Theme" />
+          <HStack gap={1} wrap="wrap">
+            <Button variant="primary" size="sm" onClick={handleApply} label="Save & Apply" />
             <Button variant="ghost" size="sm" onClick={handleReset} label="Reset Theme" />
           </HStack>
         </VStack>
       </Card>
 
-      <Card className="p-4 mt-2">
-        <VStack className="gap-2">
-          <Heading level={3}>Version & Info</Heading>
-          <Text type="supporting">System Version: 1.0.0</Text>
-          <Text type="supporting">Environment: Production</Text>
-        </VStack>
-      </Card>
     </VStack>
   );
 }
