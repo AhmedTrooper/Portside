@@ -17,6 +17,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             state::get_global_state,
+            state::refresh_global_state,
             docker::containers::docker_start_container,
             docker::containers::docker_stop_container,
             docker::containers::docker_restart_container,

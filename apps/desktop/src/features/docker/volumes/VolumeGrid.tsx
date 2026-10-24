@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Card } from "@astryxdesign/core/Card";
 import { Button } from "@astryxdesign/core/Button";
 import { DropdownMenu } from "@astryxdesign/core/DropdownMenu";
 import { Heading, Text } from "@astryxdesign/core/Text";
@@ -15,6 +14,7 @@ import {
   Wind,
 } from "lucide-react";
 import { DockerGrid } from "../shared/DockerGrid";
+import { DockerCard } from "../shared/DockerCard";
 import { useDockerSnapshot } from "../shared/useDockerSnapshot";
 import {
   parseLabels,
@@ -220,7 +220,7 @@ function VolumeCard({ volume, onRemove }: VolumeCardProps) {
   const mountpoint = volume.Mountpoint || "Unknown";
 
   return (
-    <Card padding={4} className="min-w-0 flex flex-col gap-3">
+    <DockerCard>
       <div className="flex items-start justify-between gap-2 min-w-0">
         <div className="min-w-0 flex items-start gap-2">
           <Database size={18} aria-hidden className="mt-0.5 shrink-0 opacity-80" />
@@ -266,7 +266,7 @@ function VolumeCard({ volume, onRemove }: VolumeCardProps) {
         <span className="text-[10px] uppercase tracking-wide opacity-60">Mountpoint</span>
         <div className="mt-1 font-mono text-[11px] break-all opacity-80">{mountpoint}</div>
       </div>
-    </Card>
+    </DockerCard>
   );
 }
 

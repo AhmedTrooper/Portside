@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Card } from "@astryxdesign/core/Card";
 import { Button } from "@astryxdesign/core/Button";
 import { DropdownMenu } from "@astryxdesign/core/DropdownMenu";
 import { Heading, Text } from "@astryxdesign/core/Text";
@@ -17,6 +16,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { DockerGrid } from "../shared/DockerGrid";
+import { DockerCard } from "../shared/DockerCard";
 import { StatusPill } from "../shared/StatusPill";
 import { useDockerSnapshot } from "../shared/useDockerSnapshot";
 import {
@@ -92,10 +92,9 @@ export function ComposeGrid() {
 
       toast({
         type: "info",
-        body: `${actionLabel(action)} ${project.Name}…`,
+        body: `${actionLabel(action)} ${project.Name}.`,
         autoHideDuration: 3000,
       });
-      await refresh();
     } catch (e) {
       toast({
         type: "error",
@@ -103,6 +102,7 @@ export function ComposeGrid() {
         isAutoHide: false,
       });
     } finally {
+      await refresh();
       setBusyProject(null);
     }
   };
@@ -114,10 +114,9 @@ export function ComposeGrid() {
       await invoke("docker_compose_up", { project, files: [path] });
       toast({
         type: "info",
-        body: `Deployed ${project ?? baseName(path)}…`,
+        body: `Deployed ${project ?? baseName(path)}.`,
         autoHideDuration: 3000,
       });
-      await refresh();
     } catch (e) {
       toast({
         type: "error",
@@ -125,6 +124,7 @@ export function ComposeGrid() {
         isAutoHide: false,
       });
     } finally {
+      await refresh();
       setIsDeploying(false);
     }
   };
@@ -249,7 +249,7 @@ function ComposeCard({ project, isBusy, onAction }: ComposeCardProps) {
   }`;
 
   return (
-    <Card padding={4} className="min-w-0 flex flex-col gap-3">
+    <DockerCard>
       <div className="flex items-start justify-between gap-2 min-w-0">
         <div className="min-w-0 flex items-start gap-2">
           <Boxes size={18} aria-hidden className="mt-0.5 shrink-0 opacity-80" />
@@ -271,6 +271,7 @@ function ComposeCard({ project, isBusy, onAction }: ComposeCardProps) {
               variant: "ghost",
               isIconOnly: true,
               size: "sm",
+              isDisabled: isBusy,
             }}
             hasChevron={false}
             items={[
@@ -345,7 +346,7 @@ function ComposeCard({ project, isBusy, onAction }: ComposeCardProps) {
           {files.length ? baseName(files[0]) : "No config file"}
         </span>
       </div>
-    </Card>
+    </DockerCard>
   );
 }
 
@@ -370,14 +371,14 @@ function baseName(path: string): string {
 function actionLabel(action: string): string {
   switch (action) {
     case "up":
-      return "Starting";
+      return "Started";
     case "stop":
-      return "Stopping";
+      return "Stopped";
     case "restart":
-      return "Restarting";
+      return "Restarted";
     case "down":
-      return "Taking down";
+      return "Took down";
     default:
-      return "Updating";
+      return "Updated";
   }
 }

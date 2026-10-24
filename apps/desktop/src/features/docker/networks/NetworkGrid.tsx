@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Card } from "@astryxdesign/core/Card";
 import { Button } from "@astryxdesign/core/Button";
 import { DropdownMenu } from "@astryxdesign/core/DropdownMenu";
 import { Heading, Text } from "@astryxdesign/core/Text";
@@ -17,6 +16,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { DockerGrid } from "../shared/DockerGrid";
+import { DockerCard } from "../shared/DockerCard";
 import { useDockerSnapshot } from "../shared/useDockerSnapshot";
 import {
   parseLabels,
@@ -61,6 +61,11 @@ export function NetworkGrid() {
 
   const systemCount = useMemo(
     () => networks.filter(isSystemNetwork).length,
+    [networks]
+  );
+
+  const bridgeCount = useMemo(
+    () => networks.filter((network) => network.Driver === "bridge").length,
     [networks]
   );
 
@@ -110,7 +115,7 @@ export function NetworkGrid() {
         label="Network actions"
         title="Networks"
         icon={Network}
-        meta={`${networks.length} total${systemCount ? ` · ${systemCount} system` : ""}`}
+        meta={`${networks.length} total · ${bridgeCount} bridge${bridgeCount === 1 ? "" : "s"}${systemCount ? ` · ${systemCount} system` : ""}`}
         search={search}
         onSearch={setSearch}
         searchPlaceholder="Search networks"
@@ -202,7 +207,7 @@ function NetworkCard({ network, onRemove }: NetworkCardProps) {
   const internal = network.Internal === "true";
 
   return (
-    <Card padding={4} className="min-w-0 flex flex-col gap-3">
+    <DockerCard>
       <div className="flex items-start justify-between gap-2 min-w-0">
         <div className="min-w-0 flex items-start gap-2">
           <GitBranch size={18} aria-hidden className="mt-0.5 shrink-0 opacity-80" />
@@ -276,7 +281,7 @@ function NetworkCard({ network, onRemove }: NetworkCardProps) {
             : labelEntries.map(([key, value]) => `${key.replace(/^com\.docker\.compose\./, "")}=${value}`).join(" · ")}
         </div>
       </div>
-    </Card>
+    </DockerCard>
   );
 }
 

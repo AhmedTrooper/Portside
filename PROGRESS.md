@@ -17,6 +17,7 @@
 - [x] Volume card grid (create, remove, prune)
 - [x] Docker Compose projects (list, deploy, up, stop, restart, down)
 - [x] Compose-managed containers and networks are protected from individual actions
+- [x] Immediate Docker state refresh after lifecycle and Compose actions
 
 ## UI/UX Enhancements
 - [x] Create Custom Draggable Titlebar with Window Controls (Minimize, Maximize, Close)
@@ -24,6 +25,7 @@
 - [x] Sidebar navigation with Collapsible state
 - [x] Migrate to strict component-based layouts (Astryx rules)
 - [x] Responsive card-grid layouts for every Docker resource
+- [x] Consistent resource card borders, padding, elevation, and grid spacing
 - [x] Add loading skeletons for data fetching
 
 ## Future Integrations

@@ -46,6 +46,9 @@ export function DockerPage() {
   const danglingImages = images.filter(
     (image) => image.Repository === "<none>" || image.Tag === "<none>"
   ).length;
+  const bridgeNetworks = networks.filter(
+    (network) => network.Driver === "bridge"
+  ).length;
 
   return (
     <VStack gap={4} className="p-6 w-full min-h-full">
@@ -80,7 +83,7 @@ export function DockerPage() {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 w-full mt-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 w-full mt-2">
         <ResourceCard
           to="/docker/containers"
           icon={ContainerIcon}
@@ -105,7 +108,7 @@ export function DockerPage() {
           title="Networks"
           description="Browse drivers, create user-defined bridges, and remove networks."
           count={networks.length}
-          detail="Bridge, overlay, macvlan, ipvlan"
+          detail={`${bridgeNetworks} bridge${bridgeNetworks === 1 ? "" : "s"}`}
           isLoading={isLoading}
         />
         <ResourceCard
@@ -144,7 +147,9 @@ function ResourceCard({
     <Link to={to} className="block min-w-0 rounded-[var(--radius-container)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
       <Card
         padding={5}
-        className="h-full min-w-0 transition-transform hover:-translate-y-0.5 hover:shadow-md"
+        elevation="low"
+        className="h-full min-w-0 transition-transform hover:-translate-y-0.5"
+        style={{ borderColor: "var(--color-border-emphasized)" }}
       >
         <div className="flex items-start justify-between gap-3">
           <span

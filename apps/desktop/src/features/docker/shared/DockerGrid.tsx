@@ -8,7 +8,7 @@ import { Button } from "@astryxdesign/core/Button";
 import { Heading, Text } from "@astryxdesign/core/Text";
 
 export const GRID_CLASS =
-  "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4";
+  "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5";
 
 interface DockerGridProps {
   /** Accessible label for the toolbar. */
@@ -52,7 +52,12 @@ export function DockerGrid({
   children,
 }: DockerGridProps) {
   return (
-    <Card padding={0} className="w-full h-full min-h-0 flex flex-col">
+    <Card
+      padding={0}
+      elevation="low"
+      className="w-full h-full min-h-0 flex flex-col"
+      style={{ borderColor: "var(--color-border-emphasized)" }}
+    >
       <Toolbar
         label={label}
         size="md"
@@ -107,7 +112,7 @@ export function DockerGrid({
         </div>
       ) : null}
 
-      <div className="flex-1 min-h-0 overflow-auto p-4">
+      <div className="flex-1 min-h-0 overflow-auto p-5">
         {isLoading && itemCount === 0 ? (
           <GridSkeleton />
         ) : itemCount === 0 ? (
@@ -131,7 +136,13 @@ function GridSkeleton() {
   return (
     <div className={GRID_CLASS} aria-hidden>
       {Array.from({ length: 6 }, (_, index) => (
-        <Card key={index} padding={4} className="min-h-[190px] animate-pulse">
+        <Card
+          key={index}
+          padding={5}
+          elevation="low"
+          className="min-h-[200px] animate-pulse"
+          style={{ borderColor: "var(--color-border-emphasized)" }}
+        >
           <div className="h-4 w-2/3 rounded bg-current opacity-10" />
           <div className="mt-3 h-3 w-1/2 rounded bg-current opacity-10" />
           <div className="mt-6 h-3 w-full rounded bg-current opacity-10" />

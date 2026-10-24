@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Card } from "@astryxdesign/core/Card";
 import { Button } from "@astryxdesign/core/Button";
 import { DropdownMenu } from "@astryxdesign/core/DropdownMenu";
 import { Heading, Text } from "@astryxdesign/core/Text";
@@ -15,6 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { DockerGrid } from "../shared/DockerGrid";
+import { DockerCard } from "../shared/DockerCard";
 import { useDockerSnapshot } from "../shared/useDockerSnapshot";
 import {
   imageReference,
@@ -205,7 +205,7 @@ function ImageCard({ image, onRemove }: ImageCardProps) {
   const containerCount = Number.parseInt(image.Containers, 10);
 
   return (
-    <Card padding={4} className="min-w-0 flex flex-col gap-3">
+    <DockerCard>
       <div className="flex items-start justify-between gap-2 min-w-0">
         <div className="min-w-0 flex items-start gap-2">
           <Layers size={18} aria-hidden className="mt-0.5 shrink-0 opacity-80" />
@@ -275,7 +275,7 @@ function ImageCard({ image, onRemove }: ImageCardProps) {
             : reference}
         </span>
       </div>
-    </Card>
+    </DockerCard>
   );
 }
 

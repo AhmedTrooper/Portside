@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useNavigate } from "@tanstack/react-router";
-import { Card } from "@astryxdesign/core/Card";
 import { Button } from "@astryxdesign/core/Button";
 import { DropdownMenu } from "@astryxdesign/core/DropdownMenu";
 import { Heading, Text } from "@astryxdesign/core/Text";
@@ -21,6 +20,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { DockerGrid } from "../shared/DockerGrid";
+import { DockerCard } from "../shared/DockerCard";
 import { StatusPill } from "../shared/StatusPill";
 import { useDockerSnapshot } from "../shared/useDockerSnapshot";
 import {
@@ -101,10 +101,9 @@ export function ContainerGrid() {
       }
       toast({
         type: "info",
-        body: `${labelForAction(action)} ${container.Names}…`,
+        body: `${labelForAction(action)} ${container.Names}.`,
         autoHideDuration: 2500,
       });
-      await refresh();
     } catch (e) {
       toast({
         type: "error",
@@ -112,6 +111,9 @@ export function ContainerGrid() {
         isAutoHide: false,
       });
     } finally {
+      // Refresh even when Docker reports a failure: a stop can time out after
+      // the container has already exited, so the card must show the real state.
+      await refresh();
       setBusyId(null);
     }
   };
@@ -125,10 +127,9 @@ export function ContainerGrid() {
       await invoke(`docker_compose_${action}`, { project, files: [] });
       toast({
         type: "info",
-        body: `${action === "stop" ? "Stopping" : "Restarting"} Compose project ${project}…`,
+        body: `${action === "stop" ? "Stopped" : "Restarted"} Compose project ${project}.`,
         autoHideDuration: 3000,
       });
-      await refresh();
     } catch (e) {
       toast({
         type: "error",
@@ -136,6 +137,7 @@ export function ContainerGrid() {
         isAutoHide: false,
       });
     } finally {
+      await refresh();
       setBusyId(null);
     }
   };
@@ -154,7 +156,6 @@ export function ContainerGrid() {
         autoHideDuration: 2500,
       });
       setPendingRemove(null);
-      await refresh();
     } catch (e) {
       toast({
         type: "error",
@@ -162,6 +163,7 @@ export function ContainerGrid() {
         isAutoHide: false,
       });
     } finally {
+      await refresh();
       setIsRemoving(false);
     }
   };
@@ -282,13 +284,13 @@ function ContainerCard({
         {
           label: "Stop project",
           icon: <Square size={14} aria-hidden />,
-          isDisabled: !projectActive,
+          isDisabled: isBusy || !projectActive,
           onClick: () => onProjectAction("stop"),
         },
         {
           label: "Restart project",
           icon: <RotateCw size={14} aria-hidden />,
-          isDisabled: !projectActive,
+          isDisabled: isBusy || !projectActive,
           onClick: () => onProjectAction("restart"),
         },
         { type: "divider" as const },
@@ -302,49 +304,50 @@ function ContainerCard({
         {
           label: "Start",
           icon: <Play size={14} aria-hidden />,
-          isDisabled: isRunning || state === "restarting",
+          isDisabled: isBusy || isRunning || state === "restarting",
           onClick: () => onAction("start"),
         },
         {
           label: "Stop",
           icon: <Square size={14} aria-hidden />,
-          isDisabled: !isRunning,
+          isDisabled: isBusy || !isRunning,
           onClick: () => onAction("stop"),
         },
         {
           label: "Restart",
           icon: <RotateCw size={14} aria-hidden />,
-          isDisabled: !isRunning && !isPaused,
+          isDisabled: isBusy || (!isRunning && !isPaused),
           onClick: () => onAction("restart"),
         },
         {
           label: "Pause",
           icon: <Pause size={14} aria-hidden />,
-          isDisabled: !isRunning,
+          isDisabled: isBusy || !isRunning,
           onClick: () => onAction("pause"),
         },
         {
           label: "Unpause",
           icon: <PlayCircle size={14} aria-hidden />,
-          isDisabled: !isPaused,
+          isDisabled: isBusy || !isPaused,
           onClick: () => onAction("unpause"),
         },
         { type: "divider" as const },
         {
           label: "Remove",
           icon: <Trash2 size={14} aria-hidden />,
-          isDisabled: isRunning,
+          isDisabled: isBusy || isRunning,
           onClick: () => onRemove(false),
         },
         {
           label: "Force remove",
           icon: <ShieldAlert size={14} aria-hidden />,
+          isDisabled: isBusy,
           onClick: () => onRemove(true),
         },
       ];
 
   return (
-    <Card padding={4} className="min-w-0 flex flex-col gap-3">
+    <DockerCard>
       <div className="flex items-start justify-between gap-2 min-w-0">
         <div className="min-w-0 flex items-start gap-2">
           <ContainerIcon size={18} aria-hidden className="mt-0.5 shrink-0 opacity-80" />
@@ -372,6 +375,7 @@ function ContainerCard({
               variant: "ghost",
               isIconOnly: true,
               size: "sm",
+              isDisabled: isBusy,
             }}
             hasChevron={false}
             items={menuItems}
@@ -466,7 +470,7 @@ function ContainerCard({
           {shortId(container.ID)}
         </span>
       </div>
-    </Card>
+    </DockerCard>
   );
 }
 
@@ -484,16 +488,16 @@ function Meta({ label, value }: { label: string; value: string }) {
 function labelForAction(action: ContainerAction): string {
   switch (action) {
     case "start":
-      return "Starting";
+      return "Started";
     case "stop":
-      return "Stopping";
+      return "Stopped";
     case "restart":
-      return "Restarting";
+      return "Restarted";
     case "pause":
-      return "Pausing";
+      return "Paused";
     case "unpause":
-      return "Resuming";
+      return "Resumed";
     default:
-      return "Updating";
+      return "Updated";
   }
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
@@ -19,32 +19,45 @@ const CHANGE_EVENTS = [
 /**
  * Shared Docker snapshot loader for the dashboard and resource grids.
  *
- * The backend already polls Docker every 60 seconds and emits
+ * The backend also polls Docker every 60 seconds and emits
  * `global-state-updated` when the snapshot changes. Write actions emit a
- * resource-specific event so the page can refresh immediately instead of
- * waiting for the next poll.
+ * resource-specific event; those listeners use `refresh_global_state`, which
+ * reads Docker immediately instead of returning the poller's cached snapshot.
  */
 export function useDockerSnapshot() {
   const [snapshot, setSnapshot] = useState<DockerSnapshot>(emptyDockerSnapshot);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refreshTask = useRef<Promise<void> | null>(null);
+
+  const refresh = useCallback(() => {
+    // A write action and its change event can both request a refresh. Keep one
+    // Docker read in flight so the UI doesn't issue duplicate work or let an
+    // older snapshot land after a newer one.
+    if (refreshTask.current) return refreshTask.current;
+
     setIsLoading(true);
-    try {
-      const raw: unknown = await invoke("get_global_state");
-      const parsed = parseDockerSnapshot(raw);
-      if (!parsed) {
-        setError("Received an unexpected Docker state from the backend.");
-        return;
+    const task = (async () => {
+      try {
+        const raw: unknown = await invoke("refresh_global_state");
+        const parsed = parseDockerSnapshot(raw);
+        if (!parsed) {
+          setError("Received an unexpected Docker state from the backend.");
+          return;
+        }
+        setSnapshot(parsed);
+        setError(null);
+      } catch (e) {
+        setError(stringifyError(e));
+      } finally {
+        setIsLoading(false);
+        refreshTask.current = null;
       }
-      setSnapshot(parsed);
-      setError(null);
-    } catch (e) {
-      setError(stringifyError(e));
-    } finally {
-      setIsLoading(false);
-    }
+    })();
+
+    refreshTask.current = task;
+    return task;
   }, []);
 
   useEffect(() => {
